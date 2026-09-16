@@ -11,6 +11,8 @@ import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
+import { BANNER_AD_ID, REWARD_AD_ID } from '@/constants/ad';
+import { assetUrl } from '@/utils/asset';
 import {
   Dialog,
   DialogContent,
@@ -35,15 +37,7 @@ interface MaterialItem {
 /** 是否为微信小程序环境（激励视频广告仅微信端可用） */
 const isWeapp = Taro.getEnv() === Taro.ENV_TYPE.WEAPP;
 
-/**
- * 微信流量主「激励视频」广告位 ID
- * 接入步骤：微信公众平台 → 流量主 → 创建「激励视频广告」，把 `adunit-xxxxxxx`
- * 填入下面。留空时按钮会降级为直接保存（便于开发预览）。
- */
-const REWARD_AD_ID = ''; // TODO: 替换为你的激励视频广告位 ID
-
-/** Banner 广告位（页面内合理放置，不自动弹窗） */
-const BANNER_AD_ID = ''; // TODO: 替换为你的 Banner 广告位 ID
+// 激励视频与 Banner 广告位 ID 见 @/constants/ad.ts（未开通前留空，Banner 自动隐藏、解锁自动降级）
 
 const DetailPage = () => {
   const router = useRouter();
@@ -107,7 +101,7 @@ const DetailPage = () => {
     setLockOpen(false);
     if (!isWeapp || !REWARD_AD_ID) {
       // 开发态 / 未接入广告时降级：直接保存（便于预览）
-      if (item) saveToAlbum(item.url);
+      if (item) saveToAlbum(assetUrl(item.url));
       return;
     }
     const ad = Taro.createRewardedVideoAd({ adUnitId: REWARD_AD_ID });
@@ -118,7 +112,7 @@ const DetailPage = () => {
     ad.onClose((res) => {
       if (res && res.isEnded) {
         toast.success('已解锁，开始下载');
-        if (item) saveToAlbum(item.url);
+        if (item) saveToAlbum(assetUrl(item.url));
       } else {
         toast.info('完整观看视频后才能解锁下载哦');
       }
@@ -156,8 +150,8 @@ const DetailPage = () => {
         <Image
           className="w-full"
           mode="widthFix"
-          src={item.url}
-          onClick={() => Taro.previewImage({ urls: [item.url] })}
+          src={assetUrl(item.url)}
+          onClick={() => Taro.previewImage({ urls: [assetUrl(item.url)] })}
         />
       </View>
 
@@ -171,16 +165,12 @@ const DetailPage = () => {
           ))}
         </View>
 
-        {/* 页面内 Banner 广告位（合理放置，不自动弹窗） */}
-        <View className="mt-5 rounded-xl bg-slate-50 py-3 text-center">
-          {isWeapp && BANNER_AD_ID ? (
+        {/* 页面内 Banner 广告位（配置了 BANNER_AD_ID 才显示，未开通前完全隐藏） */}
+        {isWeapp && BANNER_AD_ID ? (
+          <View className="mt-5 overflow-hidden rounded-xl">
             <Ad unitId={BANNER_AD_ID} adIntervals={30} />
-          ) : (
-            <Text className="block text-xs text-gray-400">
-              【流量主 Banner 广告位】请在微信公众平台创建广告后接入
-            </Text>
-          )}
-        </View>
+          </View>
+        ) : null}
       </View>
 
       {/* 固定底部操作栏：分享 + 下载 */}

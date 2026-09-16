@@ -198,6 +198,11 @@ export default defineConfig<'vite'>(async (merge, _env) => {
             target: `http://localhost:${serverPort}`,
             changeOrigin: true,
           },
+          // 后端本地物理存储的素材图片（server/public → /static）
+          '/static': {
+            target: `http://localhost:${serverPort}`,
+            changeOrigin: true,
+          },
         },
       },
       miniCssExtractPluginOption: {

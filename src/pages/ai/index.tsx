@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
+import { REWARD_AD_ID } from '@/constants/ad';
+import { assetUrl } from '@/utils/asset';
 import {
   Dialog,
   DialogContent,
@@ -20,8 +22,7 @@ import './index.css';
 /** 仅微信小程序支持激励视频广告 */
 const isWeapp = Taro.getEnv() === Taro.ENV_TYPE.WEAPP;
 
-/** 激励视频广告位 ID（微信公众平台-流量主创建后替换） */
-const REWARD_AD_ID = ''; // TODO: 替换为你的激励视频广告位 ID
+// 激励视频广告位 ID 见 @/constants/ad.ts（未开通前留空，解锁自动降级为直接下载）
 
 /** 预设灵感（均为合规的原创插画/风景/抽象/文字氛围方向） */
 const SUGGESTIONS = [
@@ -101,7 +102,7 @@ const AiPage = () => {
 
   /** 下载高清原图：点击后先解锁（激励视频）再保存 */
   const unlockDownload = async () => {
-    const url = result?.fullUrl || result?.thumbUrl;
+    const url = assetUrl(result?.fullUrl || result?.thumbUrl || '')
     setLockOpen(false);
     if (!url) return;
     if (!isWeapp || !REWARD_AD_ID) {
@@ -192,8 +193,8 @@ const AiPage = () => {
               <Image
                 className="w-full"
                 mode="widthFix"
-                src={result.thumbUrl}
-                onClick={() => Taro.previewImage({ urls: [result.thumbUrl!] })}
+                src={assetUrl(result.thumbUrl)}
+                onClick={() => Taro.previewImage({ urls: [assetUrl(result.thumbUrl!)] })}
               />
             </View>
             <View className="mt-3 flex flex-row items-center justify-between px-1">

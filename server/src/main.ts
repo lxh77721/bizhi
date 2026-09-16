@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '@/app.module';
 import * as express from 'express';
+import * as path from 'path';
 import { HttpStatusInterceptor } from '@/interceptors/http-status.interceptor';
 
 function parsePort(): number {
@@ -31,6 +32,13 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  // 本地物理存储素材托管：将 server/public 目录映射为 /static 静态资源
+  // 后续手动上传 CC0 图片时，放到 server/public/materials/ 下即可，前端可通过
+  // /static/materials/xxx.jpg 直接访问，无需对象存储/TOS。
+  // 说明：dev/编译产物在 server/dist 下，__dirname/../public 即 server/public
+  const publicDir = path.resolve(__dirname, '../public');
+  app.use('/static', express.static(publicDir, { maxAge: '1d' }));
 
   // 全局拦截器：统一将 POST 请求的 201 状态码改为 200
   app.useGlobalInterceptors(new HttpStatusInterceptor());

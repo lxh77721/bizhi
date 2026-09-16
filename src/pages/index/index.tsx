@@ -6,6 +6,8 @@ import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
+import { BANNER_AD_ID } from '@/constants/ad';
+import { assetUrl } from '@/utils/asset';
 import './index.css';
 
 /**
@@ -30,13 +32,10 @@ interface Category {
 const ALL_CATEGORY = { key: 'all', label: '全部' } as Category;
 
 /**
- * 流量主 Banner 广告位 ID
- * 接入步骤：在微信公众平台 → 流量主 → 创建「Banner 广告」，将生成的
- * `adunit-xxxxxxx` 填入下面的 BANNER_AD_ID 即可（留空则不展示）。
+ * 流量主 Banner 广告位 ID 见 @/constants/ad.ts（未开通前留空，页面自动隐藏 Banner）
  */
-const BANNER_AD_ID = ''; // TODO: 替换为你的微信流量主 Banner 广告位 ID
 
-/** 平台检测：仅微信小程序支持原生 <Ad>，其它端展示占位条以免报错 */
+/** 平台检测：仅微信小程序支持原生 <Ad>，其它端不渲染以免报错 */
 const isWeapp = Taro.getEnv() === Taro.ENV_TYPE.WEAPP;
 
 const IndexPage = () => {
@@ -113,7 +112,7 @@ const IndexPage = () => {
       <Image
         className="w-full"
         mode="widthFix"
-        src={item.thumbUrl}
+        src={assetUrl(item.thumbUrl)}
         lazyLoad
       />
       <Text className="block px-2 py-2 text-xs text-gray-500 truncate">
@@ -204,15 +203,7 @@ const IndexPage = () => {
       >
         {isWeapp && BANNER_AD_ID ? (
           <Ad unitId={BANNER_AD_ID} adIntervals={30} />
-        ) : (
-          <View className="flex h-12 items-center justify-center rounded-lg bg-slate-50">
-            <Text className="block text-xs text-gray-400">
-              {isWeapp
-                ? '【流量主 Banner 广告位】请在微信公众平台创建广告后填入 BANNER_AD_ID'
-                : '微信流量主 Banner 广告位'}
-            </Text>
-          </View>
-        )}
+        ) : null}
       </View>
     </View>
   );
