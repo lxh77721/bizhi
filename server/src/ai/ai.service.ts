@@ -95,6 +95,7 @@ export class AiService {
     // 低尺寸生成缩略预览图（速度快、成本低）
     const thumb = await client.generate({
       prompt,
+      model: 'doubao-seedream-4-5-251128', // 成本更友好的通用模型档位
       size: '1024x1024',
       watermark: false,
     });
@@ -113,6 +114,7 @@ export class AiService {
     try {
       const full = await client.generate({
         prompt,
+        model: 'doubao-seedream-4-5-251128', // 成本更友好的通用模型档位
         size: '2K',
         watermark: false,
       });
