@@ -47,6 +47,8 @@ const AiPage = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiResult | null>(null);
   const [lockOpen, setLockOpen] = useState(false);
+  // 是否已解锁（观看激励视频或未接入广告时直接设为 true），解锁后去水印并下载原图
+  const [unlocked, setUnlocked] = useState(false);
 
   useShareAppMessage(() => ({
     title: '用「AI头像壁纸大全」一键生成原创头像与治愈壁纸，快来试试',
@@ -106,7 +108,8 @@ const AiPage = () => {
     setLockOpen(false);
     if (!url) return;
     if (!isWeapp || !REWARD_AD_ID) {
-      if (url) await saveToAlbum(url);
+      await saveToAlbum(url);
+      setUnlocked(true);
       return;
     }
     const ad = Taro.createRewardedVideoAd({ adUnitId: REWARD_AD_ID });
@@ -117,6 +120,7 @@ const AiPage = () => {
     ad.onClose(async (res) => {
       if (res && res.isEnded) {
         toast.success('已解锁，开始下载');
+        setUnlocked(true);
         if (url) await saveToAlbum(url);
       } else {
         toast.info('完整观看视频后才能解锁下载哦');
@@ -190,12 +194,25 @@ const AiPage = () => {
         ) : result?.thumbUrl ? (
           <View>
             <View className="overflow-hidden rounded-2xl shadow-sm">
-              <Image
-                className="w-full"
-                mode="widthFix"
-                src={assetUrl(result.thumbUrl)}
-                onClick={() => Taro.previewImage({ urls: [assetUrl(result.thumbUrl!)] })}
-              />
+              <View className="relative">
+                <Image
+                  className="w-full"
+                  mode="widthFix"
+                  src={assetUrl(result.thumbUrl)}
+                  onClick={() => Taro.previewImage({ urls: [assetUrl(result.thumbUrl!)] })}
+                />
+                {/* 免费预览水印（解锁后移除） */}
+                {!unlocked && (
+                  <View className="absolute inset-0 z-10 flex items-center justify-center bg-white bg-opacity-60">
+                    <View className="flex items-center gap-2 rounded-full bg-black bg-opacity-60 px-5 py-3">
+                      <Lock size={15} color="#ffffff" />
+                      <Text className="block text-sm font-medium text-white">
+                        原图已加水印 · 观看视频解锁
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
             </View>
             <View className="mt-3 flex flex-row items-center justify-between px-1">
               <Text className="block text-xs text-gray-400">基础预览免费 · 点击图片可放大</Text>

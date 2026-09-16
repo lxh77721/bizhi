@@ -44,6 +44,8 @@ const DetailPage = () => {
   const [item, setItem] = useState<MaterialItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [lockOpen, setLockOpen] = useState(false);
+  // 是否已解锁（观看激励视频或未接入广告时直接设为 true），解锁后可去水印下载原图
+  const [unlocked, setUnlocked] = useState(false);
 
   useLoad(async () => {
     const id = router.params?.id;
@@ -100,7 +102,8 @@ const DetailPage = () => {
   const unlockDownload = () => {
     setLockOpen(false);
     if (!isWeapp || !REWARD_AD_ID) {
-      // 开发态 / 未接入广告时降级：直接保存（便于预览）
+      // 开发态 / 未接入广告时降级：直接解锁并保存（便于预览）
+      setUnlocked(true);
       if (item) saveToAlbum(assetUrl(item.url));
       return;
     }
@@ -112,6 +115,7 @@ const DetailPage = () => {
     ad.onClose((res) => {
       if (res && res.isEnded) {
         toast.success('已解锁，开始下载');
+        setUnlocked(true);
         if (item) saveToAlbum(assetUrl(item.url));
       } else {
         toast.info('完整观看视频后才能解锁下载哦');
@@ -145,14 +149,24 @@ const DetailPage = () => {
 
   return (
     <View className="min-h-screen bg-white">
-      {/* 大图预览（免费） */}
-      <View className="bg-slate-50">
+      {/* 大图预览（免费，但叠加半透明水印遮罩保护；解锁后去水印） */}
+      <View className="relative bg-slate-50">
         <Image
           className="w-full"
           mode="widthFix"
           src={assetUrl(item.url)}
           onClick={() => Taro.previewImage({ urls: [assetUrl(item.url)] })}
         />
+        {!unlocked && (
+          <View className="absolute inset-0 z-10 flex items-center justify-center bg-white bg-opacity-60">
+            <View className="flex items-center gap-2 rounded-full bg-black bg-opacity-60 px-5 py-3">
+              <Lock size={15} color="#ffffff" />
+              <Text className="block text-sm font-medium text-white">
+                原图已加水印 · 观看视频解锁
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
 
       <View className="px-4 py-4">

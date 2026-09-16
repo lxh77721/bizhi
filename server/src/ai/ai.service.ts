@@ -92,47 +92,31 @@ export class AiService {
       HeaderUtils.extractForwardHeaders(forwardHeaders),
     );
 
-    // 低尺寸生成缩略预览图（速度快、成本低）
-    const thumb = await client.generate({
+    // 只生成一张 2K 原图：既作免费预览，也作“激励视频解锁后下载”的高清原图。
+    // 预览内容由前端加水印遮罩保护，解锁后去水印下载原图，单图生成可显著降低成本。
+    const img = await client.generate({
       prompt,
       model: 'doubao-seedream-4-5-251128', // 成本更友好的通用模型档位
-      size: '1024x1024',
+      size: '2K',
       watermark: false,
     });
-    const thumbHelper = client.getResponseHelper(thumb);
+    const imgHelper = client.getResponseHelper(img);
 
-    if (!thumbHelper.success) {
+    if (!imgHelper.success) {
       throw new Error(
-        `AI 生成失败: ${thumbHelper.errorMessages.join(';')}`,
+        `AI 生成失败: ${imgHelper.errorMessages.join(';')}`,
       );
     }
 
-    let thumbUrl = thumbHelper.imageUrls[0];
-    let fullUrl = thumbUrl;
-
-    // 生成 2K 高清原图用于“激励视频解锁后下载”
-    try {
-      const full = await client.generate({
-        prompt,
-        model: 'doubao-seedream-4-5-251128', // 成本更友好的通用模型档位
-        size: '2K',
-        watermark: false,
-      });
-      const fullHelper = client.getResponseHelper(full);
-      if (fullHelper.success && fullHelper.imageUrls[0]) {
-        fullUrl = fullHelper.imageUrls[0];
-      }
-    } catch (err) {
-      console.error('[AI] 高清图生成失败，使用缩略图', err);
-    }
+    const url = imgHelper.imageUrls[0];
 
     return {
       rejected: false,
       prompt,
-      thumbUrl,
-      fullUrl,
-      width: 1024,
-      height: 1024,
+      thumbUrl: url,
+      fullUrl: url,
+      width: 2048,
+      height: 2048,
       createdAt: new Date().toISOString(),
     };
   }
