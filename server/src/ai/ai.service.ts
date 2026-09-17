@@ -5,9 +5,15 @@ import {
   HeaderUtils,
   LLMClient,
 } from 'coze-coding-dev-sdk';
+import { ConfigService } from '@/config/config.service';
+import { StatsService } from '@/stats/stats.service';
 
 @Injectable()
 export class AiService {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly statsService: StatsService,
+  ) {}
   /**
    * 版权/合规过滤：拒绝明星、动漫IP、真人肖像等生成请求。
    * 只允许原创插画、风景、抽象、文字氛围感素材。
@@ -46,7 +52,7 @@ export class AiService {
     const config = new Config();
     const client = new LLMClient(config);
 
-    const messages = [
+    const messages: Array<{ role: 'user' | 'system'; content: string }> = [
       {
         role: 'user' as const,
         content:
@@ -57,6 +63,12 @@ export class AiService {
           `用户描述：${keyword}`,
       },
     ];
+
+    // 后台可额外追加的系统约束（如品牌话术、配色偏好）
+    const extra = this.configService.get().aiSystemPrompt?.trim();
+    if (extra) {
+      messages.unshift({ role: 'system', content: extra });
+    }
 
     try {
       const response = await client.invoke(messages, {
@@ -92,12 +104,16 @@ export class AiService {
       HeaderUtils.extractForwardHeaders(forwardHeaders),
     );
 
+    // 模型档位与尺寸均从后台配置读取（server/data/config.json），后台可动态调整
+    const aiModel = this.configService.get().aiModel || 'doubao-seedream-4-5-251128';
+    const aiSize = this.configService.get().aiSize || '2K';
+
     // 只生成一张 2K 原图：既作免费预览，也作“激励视频解锁后下载”的高清原图。
     // 预览内容由前端加水印遮罩保护，解锁后去水印下载原图，单图生成可显著降低成本。
     const img = await client.generate({
       prompt,
-      model: 'doubao-seedream-4-5-251128', // 成本更友好的通用模型档位
-      size: '2K',
+      model: aiModel,
+      size: aiSize,
       watermark: false,
     });
     const imgHelper = client.getResponseHelper(img);
@@ -109,6 +125,9 @@ export class AiService {
     }
 
     const url = imgHelper.imageUrls[0];
+
+    // 统计一次 AI 生成（首页管理看板指标）
+    this.statsService.recordGenerate();
 
     return {
       rejected: false,

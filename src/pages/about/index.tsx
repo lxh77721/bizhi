@@ -1,6 +1,8 @@
 import { View, Text } from '@tarojs/components';
 import Taro, { useShareAppMessage } from '@tarojs/taro';
+import { useState, useEffect } from 'react';
 import { Mail, ShieldCheck, Info, HandHeart } from 'lucide-react-taro';
+import { fetchPublicConfig } from '@/services/config';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import './index.css';
@@ -8,9 +10,19 @@ import './index.css';
 /**
  * 侵权投诉 / 反馈邮箱（请改为你自己的真实邮箱）
  */
-const CONTACT_EMAIL = 'support@example.com'; // TODO: 替换为你的侵权投诉邮箱
+const FALLBACK_EMAIL = 'support@example.com'; // 后端云端配置未返回时的兜底邮箱
 
 const AboutPage = () => {
+  const [email, setEmail] = useState(FALLBACK_EMAIL);
+
+  useEffect(() => {
+    // 从后端 /api/config 拉取侵权投诉邮箱与小程序名（后台可动态维护）
+    (async () => {
+      const cfg = await fetchPublicConfig();
+      if (cfg?.contactEmail) setEmail(cfg.contactEmail);
+    })();
+  }, []);
+
   useShareAppMessage(() => ({
     title: '「AI头像壁纸大全」超多原创头像与治愈壁纸，免费逛',
     path: '/pages/about/index',
@@ -18,7 +30,7 @@ const AboutPage = () => {
 
   const onMail = () => {
     Taro.setClipboardData({
-      data: CONTACT_EMAIL,
+      data: email,
       success: () => Taro.showToast({ title: '邮箱已复制', icon: 'success' }),
     });
   };
@@ -82,7 +94,7 @@ const AboutPage = () => {
               <Text className="block text-blue-500">复制邮箱</Text>
             </Button>
           </View>
-          <Text className="block mt-2 text-xs text-gray-400">{CONTACT_EMAIL}</Text>
+          <Text className="block mt-2 text-xs text-gray-400">{email}</Text>
         </CardContent>
       </Card>
 

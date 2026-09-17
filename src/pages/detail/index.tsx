@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { BANNER_AD_ID, REWARD_AD_ID } from '@/constants/ad';
+import { fetchPublicConfig, getPublicConfig } from '@/services/config';
 import { assetUrl } from '@/utils/asset';
 import {
   Dialog,
@@ -48,6 +49,7 @@ const DetailPage = () => {
   const [unlocked, setUnlocked] = useState(false);
 
   useLoad(async () => {
+    fetchPublicConfig(); // 拉取云端流量主 ID 等配置（后台可动态维护）
     const id = router.params?.id;
     if (!id) return;
     try {
@@ -98,16 +100,23 @@ const DetailPage = () => {
     }
   };
 
+  /** 激励视频解锁成功（或降级）后上报一次统计 */
+  const reportUnlock = () => {
+    Network.request({ url: '/api/events/unlock', method: 'POST' }).catch(() => {});
+  };
+
   /** 观看激励视频后解锁下载 */
   const unlockDownload = () => {
     setLockOpen(false);
-    if (!isWeapp || !REWARD_AD_ID) {
+    const rewardId = getPublicConfig()?.rewardAdId || REWARD_AD_ID;
+    if (!isWeapp || !rewardId) {
       // 开发态 / 未接入广告时降级：直接解锁并保存（便于预览）
       setUnlocked(true);
+      reportUnlock();
       if (item) saveToAlbum(assetUrl(item.url));
       return;
     }
-    const ad = Taro.createRewardedVideoAd({ adUnitId: REWARD_AD_ID });
+    const ad = Taro.createRewardedVideoAd({ adUnitId: rewardId });
     ad.onError((err) => {
       console.error('[detail] 激励视频错误', err);
       toast.error('广告加载失败，请稍后再试');
@@ -116,6 +125,7 @@ const DetailPage = () => {
       if (res && res.isEnded) {
         toast.success('已解锁，开始下载');
         setUnlocked(true);
+        reportUnlock();
         if (item) saveToAlbum(assetUrl(item.url));
       } else {
         toast.info('完整观看视频后才能解锁下载哦');
@@ -179,10 +189,10 @@ const DetailPage = () => {
           ))}
         </View>
 
-        {/* 页面内 Banner 广告位（配置了 BANNER_AD_ID 才显示，未开通前完全隐藏） */}
-        {isWeapp && BANNER_AD_ID ? (
+        {/* 页面内 Banner 广告位（配置了流量主 ID 才显示，未开通前完全隐藏；ID 可由后台动态下发） */}
+        {isWeapp && (getPublicConfig()?.bannerAdId || BANNER_AD_ID) ? (
           <View className="mt-5 overflow-hidden rounded-xl">
-            <Ad unitId={BANNER_AD_ID} adIntervals={30} />
+            <Ad unitId={getPublicConfig()?.bannerAdId || BANNER_AD_ID} adIntervals={30} />
           </View>
         ) : null}
       </View>

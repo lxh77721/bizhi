@@ -33,7 +33,8 @@
 export interface MaterialItem {
   id: string;
   title: string;
-  category: 'girl' | 'boy' | 'couple' | 'landscape' | 'text';
+  /** 分类 key（对应 CATEGORIES，后台可动态新增分类） */
+  category: string;
   url: string;
   thumbUrl: string;
   width: number;
@@ -41,13 +42,20 @@ export interface MaterialItem {
   tags: string[];
 }
 
-/** 首页分类导航标签（key 与素材的 category 对应，label 为展示名） */
-export const CATEGORIES: { key: string; label: string }[] = [
-  { key: 'girl', label: '女生头像' },
-  { key: 'boy', label: '男生头像' },
-  { key: 'couple', label: '情侣头像' },
-  { key: 'landscape', label: '治愈风景壁纸' },
-  { key: 'text', label: '极简文字壁纸' },
+/** 首页分类（key 对应素材 category，label 为展示名，icon 为可选图标名） */
+export interface Category {
+  key: string;
+  label: string;
+  icon?: string;
+}
+
+/** 首页分类导航标签（种子数据，可被后台动态修改并写回 data 文件） */
+export const CATEGORIES: Category[] = [
+  { key: 'girl', label: '女生头像', icon: 'Sparkles' },
+  { key: 'boy', label: '男生头像', icon: 'Sun' },
+  { key: 'couple', label: '情侣头像', icon: 'Heart' },
+  { key: 'landscape', label: '治愈风景壁纸', icon: 'Mountain' },
+  { key: 'text', label: '极简文字壁纸', icon: 'PenLine' },
 ];
 
 export const MATERIALS: MaterialItem[] = [

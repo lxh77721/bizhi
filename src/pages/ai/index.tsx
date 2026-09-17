@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, Image } from '@tarojs/components';
 import Taro, { useShareAppMessage } from '@tarojs/taro';
 import { Wand, Download, CirclePlay, Sparkles, Lock } from 'lucide-react-taro';
@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
 import { REWARD_AD_ID } from '@/constants/ad';
+import { fetchPublicConfig, getPublicConfig } from '@/services/config';
 import { assetUrl } from '@/utils/asset';
 import {
   Dialog,
@@ -54,6 +55,11 @@ const AiPage = () => {
     title: '用「AI头像壁纸大全」一键生成原创头像与治愈壁纸，快来试试',
     path: '/pages/ai/index',
   }));
+
+  // 挂载时拉取云端配置（流量主 ID、AI 模型等，后台可动态维护）
+  useEffect(() => {
+    fetchPublicConfig();
+  }, []);
 
   /** 生成图片 */
   const onGenerate = async () => {
@@ -102,17 +108,24 @@ const AiPage = () => {
     }
   };
 
+  /** 激励视频解锁成功（或降级）后上报一次统计 */
+  const reportUnlock = () => {
+    Network.request({ url: '/api/events/unlock', method: 'POST' }).catch(() => {});
+  };
+
   /** 下载高清原图：点击后先解锁（激励视频）再保存 */
   const unlockDownload = async () => {
     const url = assetUrl(result?.fullUrl || result?.thumbUrl || '')
     setLockOpen(false);
     if (!url) return;
-    if (!isWeapp || !REWARD_AD_ID) {
+    const rewardId = getPublicConfig()?.rewardAdId || REWARD_AD_ID;
+    if (!isWeapp || !rewardId) {
       await saveToAlbum(url);
       setUnlocked(true);
+      reportUnlock();
       return;
     }
-    const ad = Taro.createRewardedVideoAd({ adUnitId: REWARD_AD_ID });
+    const ad = Taro.createRewardedVideoAd({ adUnitId: rewardId });
     ad.onError((err) => {
       console.error('[ai] 激励视频错误', err);
       toast.error('广告加载失败，请稍后再试');
@@ -121,6 +134,7 @@ const AiPage = () => {
       if (res && res.isEnded) {
         toast.success('已解锁，开始下载');
         setUnlocked(true);
+        reportUnlock();
         if (url) await saveToAlbum(url);
       } else {
         toast.info('完整观看视频后才能解锁下载哦');
