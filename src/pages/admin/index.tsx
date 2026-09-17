@@ -260,32 +260,83 @@ function MaterialsTab() {
   const editorUrl = (id: string) =>
     id && materials.some((m) => m.id === id) ? `/api/admin/materials/${id}` : '/api/admin/materials';
 
+  /** H5 端绕过 Taro.uploadFile：Coze 沙箱 Service Worker 会拦截 blob fetch 导致上传失败，
+ *  改为创建原生 file input 取原始 File 对象，用 XHR + FormData 上传。 */
+  const uploadH5File = (): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const g: any = globalThis;
+      const input: any = g.document?.createElement?.('input');
+      if (!input) return reject(new Error('当前环境不支持上传'));
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = async () => {
+        const file: any = input.files?.[0];
+        if (!file) return reject(new Error('未选择文件'));
+        try {
+          const form = new g.FormData();
+          form.append('file', file);
+          const xhr = new g.XMLHttpRequest();
+          xhr.open('POST', '/api/admin/upload');
+          xhr.setRequestHeader('Authorization', authHeader().Authorization);
+          xhr.onload = () => {
+            try {
+              const body = JSON.parse(xhr.responseText);
+              const data = body?.data;
+              if (data?.url) return resolve(data.url);
+              reject(new Error('上传未返回图片地址'));
+            } catch (e) {
+              reject(e);
+            }
+          };
+          xhr.onerror = () => reject(new Error('网络错误'));
+          xhr.send(form);
+        } catch (e) {
+          reject(e);
+        }
+      };
+      input.click();
+    });
+
+  const applyUrl = (field: 'url' | 'thumbUrl', url: string) => {
+    setEditing((prev) => {
+      // 上传原图时同步生成预览缩略图（同一物理文件）
+      const next = { ...prev, url: field === 'url' ? url : prev.url };
+      if (field === 'url') {
+        next.thumbUrl = next.thumbUrl || url;
+        const fn = url.split('/').pop() || '';
+        setAutoId(fn.replace(/\.\w+$/, ''));
+      } else {
+        next.thumbUrl = url;
+      }
+      return next;
+    });
+  };
+
   const uploadImage = async (field: 'url' | 'thumbUrl') => {
     try {
-      const r = await Taro.chooseImage({ count: 1, sizeType: ['compressed'] });
-      const f = r.tempFiles[0];
-      const res: any = await Network.uploadFile({
-        url: '/api/admin/upload',
-        filePath: (f as any).path,
-        name: 'file',
-        header: authHeader(),
-      });
-      console.log('[admin] upload status=', res?.statusCode, 'data=', res?.data);
-      // 兼容：部分平台 res.data 已是对象，部分为需 JSON.parse 的字符串
-      const body = typeof res?.data === 'string' ? JSON.parse(res.data) : res.data;
-      const data = body?.data;
-      if (!data?.url) throw new Error('上传未返回图片地址');
-      setEditing((prev) => {
-        // 上传原图时同步生成预览缩略图（同一物理文件）
-        const next = { ...prev, url: field === 'url' ? data.url : prev.url };
-        if (field === 'url') {
-          next.thumbUrl = next.thumbUrl || data.url;
-          setAutoId(data.url.split('/').pop().replace(/\.\w+$/, ''));
-        } else {
-          next.thumbUrl = data.url;
-        }
-        return next;
-      });
+      const isMiniApp = Taro.getEnv() === Taro.ENV_TYPE.WEAPP || Taro.getEnv() === Taro.ENV_TYPE.TT;
+      let url: string;
+      if (isMiniApp) {
+        // 小程序端：Taro.chooseImage + Network.uploadFile
+        const r = await Taro.chooseImage({ count: 1, sizeType: ['compressed'] });
+        const f: any = r.tempFiles[0];
+        if (!f) throw new Error('未选择文件');
+        const res: any = await Network.uploadFile({
+          url: '/api/admin/upload',
+          filePath: f.path,
+          name: 'file',
+          header: authHeader(),
+        });
+        console.log('[admin] upload status=', res?.statusCode, 'data=', res?.data);
+        // 兼容：部分平台 res.data 已是对象，部分为需 JSON.parse 的字符串
+        const body = typeof res?.data === 'string' ? JSON.parse(res.data) : res.data;
+        url = body?.data?.url;
+      } else {
+        // H5 端：绕过 Taro.uploadFile，用原始 File + XHR
+        url = await uploadH5File();
+      }
+      if (!url) throw new Error('上传未返回图片地址');
+      applyUrl(field, url);
     } catch (err: any) {
       console.error('[admin] 上传失败', err);
       Taro.showToast({ title: err?.message || '上传失败', icon: 'none' });

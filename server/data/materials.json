@@ -24,6 +24,11 @@
       "key": "text",
       "label": "极简文字壁纸",
       "icon": "PenLine"
+    },
+    {
+      "key": "ceshi",
+      "label": "测试分类",
+      "icon": ""
     }
   ],
   "materials": [
