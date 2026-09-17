@@ -187,15 +187,26 @@ export class AdminController {
    *  body: { categories?: string[], maxPages?: number, maxImagesPerCategory?: number } */
   @Post('crawl')
   async crawl(
-    @Body() body: { categories?: string[]; maxPages?: number; maxImagesPerCategory?: number },
+    @Body()
+    body: {
+      source?: 'avatar' | 'wallpaper';
+      categories?: string[];
+      maxPages?: number;
+      maxImagesPerCategory?: number;
+      dateFrom?: string;
+      dateTo?: string;
+    },
   ): Promise<Record<string, unknown>> {
     if (this.crawler.isRunning()) {
       throw new BadRequestException('抓取任务正在进行中，请稍后查看结果');
     }
     const result = await this.crawler.run({
+      source: body.source,
       categories: body.categories,
       maxPages: body.maxPages,
       maxImagesPerCategory: body.maxImagesPerCategory,
+      dateFrom: body.dateFrom,
+      dateTo: body.dateTo,
     });
     return { status: 'success', data: result };
   }

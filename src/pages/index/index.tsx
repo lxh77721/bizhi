@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, Image, ScrollView, Ad } from '@tarojs/components';
 import Taro, { useShareAppMessage } from '@tarojs/taro';
-import { Search, Wand, CircleAlert } from 'lucide-react-taro';
+import { Search, CircleAlert } from 'lucide-react-taro';
 import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,7 +47,7 @@ const IndexPage = () => {
 
   // 首页分享：社交裂变引流（标题埋关键词）——通过右上角菜单转发
   useShareAppMessage(() => ({
-    title: 'AI头像壁纸大全 - 超多免费头像、情侣头像、治愈壁纸，一键AI生成',
+    title: 'AI头像壁纸大全 - 超多免费头像、情侣头像、治愈壁纸',
     path: '/pages/index/index',
   }));
 
@@ -93,11 +93,6 @@ const IndexPage = () => {
     Taro.navigateTo({ url: `/pages/detail/index?id=${item.id}` });
   };
 
-  /** 切换到 AI 生成 Tab */
-  const goAI = () => {
-    Taro.switchTab({ url: '/pages/ai/index' });
-  };
-
   // 瀑布流：按奇偶索引分成左右两列，形成错落布局
   const leftCol = list.filter((_, i) => i % 2 === 0);
   const rightCol = list.filter((_, i) => i % 2 === 1);
@@ -131,9 +126,9 @@ const IndexPage = () => {
 
   return (
     <View className="min-h-screen bg-white">
-      {/* 顶部：搜索框 + AI 生成入口 */}
-      <View className="flex flex-row items-center gap-2 px-4 pt-4">
-        <View className="flex flex-1 flex-row items-center gap-2 rounded-full bg-slate-50 px-4 py-2">
+      {/* 顶部：搜索框 */}
+      <View className="px-4 pt-4">
+        <View className="flex flex-row items-center gap-2 rounded-full bg-slate-50 px-4 py-2">
           <Search size={18} color="#9ca3af" />
           <Input
             className="flex-1 bg-transparent text-sm"
@@ -144,10 +139,6 @@ const IndexPage = () => {
             onConfirm={onSearch}
           />
         </View>
-        <Button size="sm" className="shrink-0 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 px-3" onClick={goAI}>
-          <Wand size={16} color="#fff" />
-          <Text className="block text-white">AI生成</Text>
-        </Button>
       </View>
 
       {/* 分类导航标签（横向滚动） */}

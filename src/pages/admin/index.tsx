@@ -8,7 +8,32 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Settings, Images, FolderTree, LayoutDashboard, LogOut, Upload } from 'lucide-react-taro';
+import { Settings, Images, FolderTree, LayoutDashboard, LogOut, Upload, Download } from 'lucide-react-taro';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+
+/** 抓取弹窗：可选源与分类 */
+const CRAWL_SOURCES = [
+  { key: 'avatar', label: '头像源' },
+  { key: 'wallpaper', label: '壁纸源' },
+] as const;
+
+const CRAWL_CAT_OPTIONS: Record<'avatar' | 'wallpaper', { key: string; label: string }[]> = {
+  avatar: [
+    { key: 'weixintouxiang', label: '微信头像' },
+    { key: 'nanshengtouxiang', label: '男生头像' },
+    { key: 'nvshengtouxiang', label: '女生头像' },
+    { key: 'douyintouxiang', label: '抖音头像' },
+  ],
+  wallpaper: [
+    { key: '暗黑', label: '暗黑' },
+    { key: '抽象', label: '抽象' },
+    { key: '简约', label: '简约' },
+    { key: '可爱', label: '可爱' },
+    { key: '文字', label: '文字' },
+    { key: '艺术', label: '艺术' },
+    { key: '苹果', label: '苹果' },
+  ],
+};
 
 const TOKEN_KEY = 'admin_token';
 
@@ -117,24 +142,52 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     onLogout();
   };
   const [crawling, setCrawling] = useState(false);
-  const handleCrawl = useCallback(async () => {
+  const [crawlOpen, setCrawlOpen] = useState(false);
+  const [crawlSource, setCrawlSource] = useState<'avatar' | 'wallpaper'>('avatar');
+  const [selCats, setSelCats] = useState<string[]>([]);
+  const [qty, setQty] = useState('40');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  const toggleCat = (k: string) =>
+    setSelCats((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
+
+  /** 按弹窗参数触发抓取 */
+  const runCrawl = useCallback(async () => {
     if (crawling) return;
     setCrawling(true);
     try {
-      Taro.showToast({ title: '开始抓取头像…', icon: 'none' });
+      const cats = selCats.length
+        ? selCats
+        : CRAWL_CAT_OPTIONS[crawlSource].map((c) => c.key);
+      const body: Record<string, unknown> = {
+        source: crawlSource,
+        categories: cats,
+        maxPages: crawlSource === 'wallpaper' ? 10 : 3,
+        maxImagesPerCategory: Number(qty) || 40,
+      };
+      if (dateFrom.trim()) body.dateFrom = dateFrom.trim();
+      if (dateTo.trim()) body.dateTo = dateTo.trim();
+      Taro.showToast({ title: '开始抓取…', icon: 'none' });
       const res = await Network.request({
         url: '/api/admin/crawl',
         method: 'POST',
         header: authHeader(),
+        data: body,
       });
       const d = (res.data as any)?.data;
-      Taro.showToast({ title: `新增 ${d?.created ?? 0} 张头像`, icon: 'success' });
+      const n = d?.created ?? 0;
+      setCrawlOpen(false);
+      Taro.showToast({
+        title: n > 0 ? `新增 ${n} 张${crawlSource === 'wallpaper' ? '壁纸' : '头像'}` : '没有新增素材（已抓取过）',
+        icon: n > 0 ? 'success' : 'none',
+      });
     } catch (e: any) {
       Taro.showToast({ title: (e?.data as any)?.message || '抓取失败，请查看后端日志', icon: 'none' });
     } finally {
       setCrawling(false);
     }
-  }, [crawling]);
+  }, [crawling, crawlSource, selCats, qty, dateFrom, dateTo]);
 
   return (
     <View className="min-h-screen bg-slate-100">
@@ -142,7 +195,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       <View className="bg-white px-4 py-3 flex items-center justify-between border-b border-slate-200">
         <Text className="text-base font-semibold">管理后台</Text>
         <View style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Button size="sm" variant="outline" onClick={handleCrawl} disabled={crawling}>
+          <Button size="sm" variant="outline" onClick={() => setCrawlOpen(true)} disabled={crawling}>
+            <Download size={15} className="mr-1" color={crawling ? '#9ca3af' : '#4c9df5'} />
             <Text>{crawling ? '抓取中…' : '抓取素材'}</Text>
           </Button>
           <Button size="sm" variant="ghost" onClick={logout}>
@@ -151,6 +205,87 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           </Button>
         </View>
       </View>
+
+      {/* 抓取素材弹窗 */}
+      <Dialog open={crawlOpen} onOpenChange={setCrawlOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>抓取素材</DialogTitle>
+          </DialogHeader>
+          <View className="p-2 space-y-5">
+            <View>
+              <Text className="block text-sm font-medium mb-2">素材源</Text>
+              <View className="flex flex-row gap-2 flex-wrap">
+                {CRAWL_SOURCES.map((s) => (
+                  <Button
+                    key={s.key}
+                    size="sm"
+                    variant={crawlSource === s.key ? 'default' : 'outline'}
+                    onClick={() => {
+                      setCrawlSource(s.key);
+                      setSelCats([]);
+                    }}
+                  >
+                    <Text className="block">{s.label}</Text>
+                  </Button>
+                ))}
+              </View>
+            </View>
+
+            <View>
+              <Text className="block text-sm font-medium mb-2">分类（点击多选，不选则抓全部）</Text>
+              <View className="flex flex-row gap-2 flex-wrap">
+                {CRAWL_CAT_OPTIONS[crawlSource].map((c) => (
+                  <Button
+                    key={c.key}
+                    size="sm"
+                    variant={selCats.includes(c.key) ? 'default' : 'outline'}
+                    onClick={() => toggleCat(c.key)}
+                  >
+                    <Text className="block">{c.label}</Text>
+                  </Button>
+                ))}
+              </View>
+            </View>
+
+            <View>
+              <Text className="block text-sm font-medium mb-2">每个分类抓取张数</Text>
+              <Input
+                type="number"
+                value={qty}
+                onInput={(e) => setQty((e as any).detail?.value || '40')}
+                placeholder="如 40"
+              />
+            </View>
+
+            <View>
+              <Text className="block text-sm font-medium mb-2">日期范围（可选，仅头像源生效，格式 YYYY-MM-DD）</Text>
+              <View className="flex flex-row gap-2">
+                <Input
+                  className="flex-1"
+                  placeholder="起始，如 2024-01-01"
+                  value={dateFrom}
+                  onInput={(e) => setDateFrom((e as any).detail?.value || '')}
+                />
+                <Input
+                  className="flex-1"
+                  placeholder="结束"
+                  value={dateTo}
+                  onInput={(e) => setDateTo((e as any).detail?.value || '')}
+                />
+              </View>
+            </View>
+          </View>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCrawlOpen(false)}>
+              <Text>取消</Text>
+            </Button>
+            <Button onClick={runCrawl} disabled={crawling}>
+              <Text>{crawling ? '抓取中…' : '开始抓取'}</Text>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Tabs value={tab} onValueChange={setTab}>
         <View className="bg-white px-2 py-2 flex border-b border-slate-100 sticky top-0 z-10">

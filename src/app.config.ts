@@ -1,8 +1,10 @@
 export default defineAppConfig({
   pages: [
     'pages/index/index',
-    'pages/ai/index',
+    'pages/avatar/index',
+    'pages/wallpaper/index',
     'pages/about/index',
+    'pages/ai/index',
     'pages/detail/index',
     'pages/admin/index'
   ],
@@ -25,10 +27,16 @@ export default defineAppConfig({
         selectedIconPath: './assets/tabbar/house-active.png'
       },
       {
-        pagePath: 'pages/ai/index',
-        text: 'AI生成',
-        iconPath: './assets/tabbar/sparkles.png',
-        selectedIconPath: './assets/tabbar/sparkles-active.png'
+        pagePath: 'pages/avatar/index',
+        text: '头像',
+        iconPath: './assets/tabbar/user.png',
+        selectedIconPath: './assets/tabbar/user-active.png'
+      },
+      {
+        pagePath: 'pages/wallpaper/index',
+        text: '壁纸',
+        iconPath: './assets/tabbar/image.png',
+        selectedIconPath: './assets/tabbar/image-active.png'
       },
       {
         pagePath: 'pages/about/index',

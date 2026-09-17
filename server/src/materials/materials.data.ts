@@ -40,6 +40,8 @@ export interface MaterialItem {
   width: number;
   height: number;
   tags: string[];
+  /** 素材类型：avatar=头像（来自大头像站）、wallpaper=壁纸（来自壁纸站）；缺省视为头像 */
+  type?: 'avatar' | 'wallpaper';
 }
 
 /** 首页分类（key 对应素材 category，label 为展示名，icon 为可选图标名） */

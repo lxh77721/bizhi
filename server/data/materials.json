@@ -34,50 +34,63 @@
       "key": "crawler_weixintouxiang",
       "label": "weixintouxiang",
       "icon": ""
+    },
+    {
+      "key": "avatar_weixintouxiang",
+      "label": "weixintouxiang",
+      "icon": ""
+    },
+    {
+      "key": "wallpaper_艺术",
+      "label": "艺术",
+      "icon": ""
     }
   ],
   "materials": [
     {
-      "id": "cz_83dea6a3b6",
-      "title": "weixintouxiang 3",
-      "category": "crawler_weixintouxiang",
-      "url": "/static/materials/crawler/2024012621286632.jpg",
-      "thumbUrl": "/static/materials/crawler/2024012621286632.jpg",
-      "width": 1024,
-      "height": 1024,
+      "id": "wp_14",
+      "title": "G1ALFhYWEAAcT1s",
+      "category": "wallpaper_艺术",
+      "url": "/static/materials/wallpaper/wp_14.webp",
+      "thumbUrl": "/static/materials/wallpaper/wp_14_thumb.webp",
+      "width": 1080,
+      "height": 1920,
       "tags": [
-        "weixintouxiang",
-        "头像",
+        "艺术",
+        "壁纸",
         "抓取"
-      ]
+      ],
+      "type": "wallpaper"
     },
     {
       "id": "cz_26a9d9a1d3",
       "title": "weixintouxiang 2",
-      "category": "crawler_weixintouxiang",
-      "url": "/static/materials/crawler/202401280252322.jpg",
-      "thumbUrl": "/static/materials/crawler/202401280252322.jpg",
+      "category": "avatar_weixintouxiang",
+      "url": "/static/materials/avatar/202401280252322.jpg",
+      "thumbUrl": "/static/materials/avatar/202401280252322.jpg",
       "width": 1024,
       "height": 1024,
       "tags": [
         "weixintouxiang",
         "头像",
         "抓取"
-      ]
+      ],
+      "type": "avatar"
     },
     {
       "id": "cz_8713d168e8",
       "title": "weixintouxiang 1",
-      "category": "crawler_weixintouxiang",
-      "url": "/static/materials/crawler/2024012714482134.jpg",
-      "thumbUrl": "/static/materials/crawler/2024012714482134.jpg",
+      "category": "avatar_weixintouxiang",
+      "url": "/static/materials/avatar/2024012714482134.jpg",
+      "thumbUrl": "/static/materials/avatar/2024012714482134.jpg",
       "width": 1024,
       "height": 1024,
       "tags": [
         "weixintouxiang",
         "头像",
         "抓取"
-      ]
+      ],
+      "type": "avatar"
     },
     {
       "id": "girl-01",

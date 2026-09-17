@@ -5,6 +5,8 @@ import { MATERIALS, CATEGORIES, MaterialItem, Category } from '@/materials/mater
 export interface QueryMaterialDto {
   category?: string;
   keyword?: string;
+  /** 类型过滤：avatar=头像 / wallpaper=壁纸，缺省返回全部 */
+  type?: 'avatar' | 'wallpaper';
 }
 
 interface MaterialsFile {
@@ -44,6 +46,12 @@ export class MaterialsService implements OnModuleInit {
 
     if (query.category && query.category !== 'all') {
       result = result.filter((item) => item.category === query.category);
+    }
+
+    if (query.type === 'avatar') {
+      result = result.filter((item) => item.type !== 'wallpaper');
+    } else if (query.type === 'wallpaper') {
+      result = result.filter((item) => item.type === 'wallpaper');
     }
 
     if (query.keyword && query.keyword.trim()) {
