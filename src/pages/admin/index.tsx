@@ -40,8 +40,15 @@ interface PubConfig {
   bannerAdId: string;
   rewardAdId: string;
   aiModel: string;
+  aiModelEndpoint: string;
   aiSize: string;
   aiSystemPrompt: string;
+  ossEndpoint: string;
+  ossBucket: string;
+  ossRegion: string;
+  ossAccessKey: string;
+  ossSecretKey: string;
+  ossPublicUrl: string;
 }
 
 function authHeader() {
@@ -473,7 +480,16 @@ function ConfigTab() {
     { key: 'bannerAdId', label: 'Banner 广告位 ID', hint: '流量主 banner；留空则不展示' },
     { key: 'rewardAdId', label: '激励视频广告位 ID', hint: '解锁下载激励视频；留空则解锁降级为直接下载' },
     { key: 'aiModel', label: 'AI 生图模型', hint: '如 doubao-seedream-4-5-251128' },
+    { key: 'aiModelEndpoint', label: 'AI 生图模型地址', hint: 'modelBaseUrl；留空用平台默认（扣子/豆包）' },
     { key: 'aiSize', label: '生图尺寸', hint: 'SDK 仅支持 2K / 4K' },
+  ];
+  const ossFields: { key: keyof PubConfig; label: string; hint: string; password?: boolean }[] = [
+    { key: 'ossEndpoint', label: 'OSS 访问域名（七牛云）', hint: 'S3 兼容地址，如 https://s3-cn-east-1.qiniucs.com' },
+    { key: 'ossBucket', label: 'OSS 存储空间 (Bucket)', hint: '七牛云空间名称' },
+    { key: 'ossRegion', label: 'OSS 区域', hint: '默认 cn-east-1（华东）' },
+    { key: 'ossAccessKey', label: 'OSS Access Key', hint: '七牛云 AK（不向下发）', password: true },
+    { key: 'ossSecretKey', label: 'OSS Secret Key', hint: '七牛云 SK（不向下发）', password: true },
+    { key: 'ossPublicUrl', label: 'OSS 公开读域名', hint: '如 CDN/测试域名 bkt.clouddn.com；留空则素材用 30 天预签名 URL' },
   ];
 
   return (
@@ -495,6 +511,24 @@ function ConfigTab() {
               <Text className="block text-xs text-slate-400 mt-1">{f.hint}</Text>
             </View>
           ))}
+          <View className="pt-3 border-t border-slate-100">
+            <Text className="block text-sm font-semibold mb-3">对象存储（七牛云 OSS，可选）</Text>
+            {ossFields.map((f) => (
+              <View key={f.key} className="mb-3">
+                <Text className="block text-sm font-medium mb-1">{f.label}</Text>
+                <View className="bg-slate-50 rounded-lg px-3 py-2">
+                  <Input
+                    className="w-full bg-transparent"
+                    password={f.password}
+                    value={String(cfg[f.key] ?? '')}
+                    onInput={set(f.key)}
+                    placeholder={f.hint}
+                  />
+                </View>
+                <Text className="block text-xs text-slate-400 mt-1">{f.hint}</Text>
+              </View>
+            ))}
+          </View>
           <View>
             <Text className="block text-sm font-medium mb-1">生图 Prompt 附加约束（可选）</Text>
             <View className="bg-slate-50 rounded-lg px-3 py-2">

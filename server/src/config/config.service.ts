@@ -9,8 +9,16 @@ export interface AppConfig {
   bannerAdId: string;   // 流量主 banner 广告位 ID（空=隐藏）
   rewardAdId: string;   // 流量主激励视频广告位 ID（空=解锁降级）
   aiModel: string;      // AI 生图模型
+  aiModelEndpoint: string; // AI 生图模型地址（modelBaseUrl），留空用平台默认
   aiSize: string;       // AI 生图尺寸档位（SDK 仅支持 2K / 4K）
   aiSystemPrompt: string; // 生图 prompt 润色时可追加的系统约束
+  // 对象存储（七牛云 S3 兼容）——用于后台上传壁纸素材的远程存储
+  ossEndpoint: string;  // 七牛云 S3 兼容访问域名（如 https://s3-cn-east-1.qiniucs.com）
+  ossBucket: string;    // 空间（Bucket）名称
+  ossRegion: string;    // 区域（默认 cn-east-1 华东）
+  ossAccessKey: string; // AK
+  ossSecretKey: string; // SK（敏感，不向下发）
+  ossPublicUrl: string; // 空间公开读域名（如 CDN / bkt.clouddn.com），用于拼接素材访问 URL；留空则用短期预签名 URL
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -20,8 +28,15 @@ const DEFAULT_CONFIG: AppConfig = {
   bannerAdId: '',
   rewardAdId: '',
   aiModel: 'doubao-seedream-4-5-251128',
+  aiModelEndpoint: '',
   aiSize: '2K',
   aiSystemPrompt: '',
+  ossEndpoint: '',
+  ossBucket: '',
+  ossRegion: 'cn-east-1',
+  ossAccessKey: '',
+  ossSecretKey: '',
+  ossPublicUrl: '',
 };
 
 @Injectable()
@@ -54,9 +69,14 @@ export class ConfigService implements OnModuleInit {
     return this.cache;
   }
 
-  /** 公网可读的配置（去除敏感项 adminPassword），供小程序前端下发 */
+  /** 公网可读的配置（去除敏感项：管理口令、OSS 密钥），供小程序前端下发 */
   getPublic() {
-    const { adminPassword: _pwd, ...publicConfig } = this.cache;
+    const {
+      adminPassword: _pwd,
+      ossSecretKey: _sk,
+      ossAccessKey: _ak,
+      ...publicConfig
+    } = this.cache;
     return publicConfig;
   }
 }

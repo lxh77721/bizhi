@@ -98,7 +98,9 @@ export class AiService {
     }
 
     const prompt = await this.buildPrompt(keyword);
-    const config = new Config();
+    // 模型地址可配置（modelBaseUrl）：后台设置 aiModelEndpoint 后走自定义地址，否则用平台默认
+    const endpoint = this.configService.get().aiModelEndpoint?.trim();
+    const config = endpoint ? new Config({ modelBaseUrl: endpoint }) : new Config();
     const client = new ImageGenerationClient(
       config,
       HeaderUtils.extractForwardHeaders(forwardHeaders),

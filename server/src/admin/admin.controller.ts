@@ -24,6 +24,7 @@ import { AdminGuard } from '@/admin/admin.guard';
 import { MaterialsService } from '@/materials/materials.service';
 import { ConfigService, AppConfig } from '@/config/config.service';
 import { StatsService } from '@/stats/stats.service';
+import { OssService } from '@/common/oss.service';
 import { MaterialItem, Category } from '@/materials/materials.data';
 
 /** 登录 / 注销（无需守卫） */
@@ -57,6 +58,7 @@ export class AdminController {
     private readonly materialsService: MaterialsService,
     private readonly configService: ConfigService,
     private readonly statsService: StatsService,
+    private readonly oss: OssService,
   ) {}
 
   /* ------------------------------ 统计看板 ------------------------------ */
@@ -177,16 +179,30 @@ export class AdminController {
     return { status: 'success', data };
   }
 
-  /* ------------------------- 图片上传（物理存储） ------------------------- */
+  /* ------------------------- 图片上传（对象存储 / 物理存储） ------------------------- */
 
-  /** POST /api/admin/upload  multipart: file=图片  —— 保存到 server/public/materials */
+  /** POST /api/admin/upload  multipart: file=图片
+   *  - 若后台已配置七牛云 OSS：上传到 OSS 并返回可访问 URL
+   *  - 否则回退本地物理存储 server/public/materials */
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
-  upload(@UploadedFile() file: any) {
+  async upload(@UploadedFile() file: any) {
     if (!file || !file.buffer) throw new BadRequestException('未接收到文件');
     const originalExt = (file.originalname || 'jpg').split('.').pop() || 'jpg';
     const ext = /^[a-zA-Z0-9]{2,5}$/.test(originalExt) ? originalExt : 'jpg';
     const filename = `m-${Date.now()}-${randomBytes(4).toString('hex')}.${ext}`;
+
+    if (this.oss.isConfigured()) {
+      // 上传到七牛云对象存储
+      const url = await this.oss.upload(
+        file.buffer,
+        `materials/${filename}`,
+        file.mimetype || 'image/jpeg',
+      );
+      return { status: 'success', data: { url } };
+    }
+
+    // 未配置 OSS 时：保存到本地物理存储（server/public/materials，经 /static 访问）
     const dir = path.resolve(process.cwd(), 'server', 'public', 'materials');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, filename), file.buffer);
