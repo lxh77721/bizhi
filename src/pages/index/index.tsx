@@ -110,9 +110,6 @@ const IndexPage = () => {
         src={assetUrl(item.thumbUrl)}
         lazyLoad
       />
-      <Text className="block px-2 py-2 text-xs text-gray-500 truncate">
-        {item.title}
-      </Text>
     </View>
   );
 
