@@ -191,7 +191,8 @@ export class CrawlerService {
     // 同步壁纸站分类（tags）
     let siteTags: string[] = [];
     try {
-      siteTags = JSON.parse(await this.fetchText(`${base}/api/get_tags.php`)) || [];
+      const parsed = JSON.parse(await this.fetchText(`${base}/api/get_tags.php`));
+      siteTags = Array.isArray(parsed) ? parsed : (parsed?.data || []);
     } catch (e) {
       console.warn('[crawler] 壁纸站分类同步失败', e?.message);
       siteTags = ['简约', '艺术', '风景', '文字'];
