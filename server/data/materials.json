@@ -19,9 +19,392 @@
       "key": "avatar_douyintouxiang",
       "label": "抖音头像",
       "type": "avatar"
+    },
+    {
+      "key": "wallpaper_暗黑",
+      "label": "暗黑",
+      "type": "wallpaper"
+    },
+    {
+      "key": "wallpaper_抽象",
+      "label": "抽象",
+      "type": "wallpaper"
+    },
+    {
+      "key": "wallpaper_简约",
+      "label": "简约",
+      "type": "wallpaper"
+    },
+    {
+      "key": "wallpaper_可爱",
+      "label": "可爱",
+      "type": "wallpaper"
+    },
+    {
+      "key": "wallpaper_文字",
+      "label": "文字",
+      "type": "wallpaper"
+    },
+    {
+      "key": "wallpaper_艺术",
+      "label": "艺术",
+      "type": "wallpaper"
+    },
+    {
+      "key": "wallpaper_苹果",
+      "label": "苹果",
+      "type": "wallpaper"
     }
   ],
   "materials": [
+    {
+      "id": "wp_32",
+      "title": "G03j1HrWUAAYHiz",
+      "category": "wallpaper_苹果",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/苹果/32_34852dac.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/苹果/32_34852dac.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "苹果",
+        "壁纸",
+        "苹",
+        "果"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_14",
+      "title": "G1ALFhYWEAAcT1s",
+      "category": "wallpaper_艺术",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/艺术/14_6b54c82f.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/艺术/14_6b54c82f.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "艺术",
+        "壁纸",
+        "艺",
+        "术"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_26",
+      "title": "Gz1PdbBXsAAgf2s",
+      "category": "wallpaper_文字",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/文字/26_8991af65.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/文字/26_8991af65.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "文字",
+        "壁纸",
+        "文",
+        "字"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_19",
+      "title": "G08qe08WQAARMFk",
+      "category": "wallpaper_可爱",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/可爱/19_f576e0b0.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/可爱/19_f576e0b0.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "可爱",
+        "壁纸",
+        "可",
+        "爱"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_10",
+      "title": "G0 ZbngWsAAxxPt",
+      "category": "wallpaper_简约",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/简约/10_ce49c5de.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/简约/10_ce49c5de.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "简约",
+        "壁纸",
+        "简",
+        "约"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_27",
+      "title": "Gz1PdD6XoAEemYn",
+      "category": "wallpaper_简约",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/简约/27_63014928.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/简约/27_63014928.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "简约",
+        "壁纸",
+        "简",
+        "约",
+        ",",
+        " "
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_33",
+      "title": "G03ljqVW4AAt7vW",
+      "category": "wallpaper_简约",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/简约/33_427f1e0b.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/简约/33_427f1e0b.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "简约",
+        "壁纸",
+        "简",
+        "约"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_34",
+      "title": "G03zhLSbkAElncX",
+      "category": "wallpaper_简约",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/简约/34_b56934e7.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/简约/34_b56934e7.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "简约",
+        "壁纸",
+        "简",
+        "约"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_20",
+      "title": "FfSY8XKUYAQHprW",
+      "category": "wallpaper_抽象",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/抽象/20_f2b39b2d.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/抽象/20_f2b39b2d.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "抽象",
+        "壁纸",
+        "抽",
+        "象"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_30",
+      "title": "G1BO JIW0AA9dzU",
+      "category": "wallpaper_抽象",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/抽象/30_340e78e2.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/抽象/30_340e78e2.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "抽象",
+        "壁纸",
+        "抽",
+        "象"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_35",
+      "title": "G08AtQ AEAIPtmU",
+      "category": "wallpaper_抽象",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/抽象/35_5059d3a1.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/抽象/35_5059d3a1.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "抽象",
+        "壁纸",
+        "抽",
+        "象"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_4",
+      "title": "G1CzUjGWoAAHJH3",
+      "category": "wallpaper_暗黑",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/4_156567de.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/4_156567de.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "暗黑",
+        "壁纸",
+        "暗",
+        "黑"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_6",
+      "title": "G1Cn6fNX0AEEela",
+      "category": "wallpaper_暗黑",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/6_95fc8e3f.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/6_95fc8e3f.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "暗黑",
+        "壁纸",
+        "暗",
+        "黑"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_9",
+      "title": "G0 VNDWWAAA848v",
+      "category": "wallpaper_暗黑",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/9_6ff107eb.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/9_6ff107eb.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "暗黑",
+        "壁纸",
+        "动",
+        "漫",
+        ",",
+        " "
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_11",
+      "title": "G0 9RgSW0AA9ckz",
+      "category": "wallpaper_暗黑",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/11_e5c0a33d.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/11_e5c0a33d.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "暗黑",
+        "壁纸",
+        "可",
+        "爱",
+        ",",
+        " "
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_13",
+      "title": "G0 NTUUX0AA7zT6",
+      "category": "wallpaper_暗黑",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/13_7fc2f914.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/13_7fc2f914.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "暗黑",
+        "壁纸",
+        "暗",
+        "黑"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_17",
+      "title": "G1BRYkdW0AAkmTi",
+      "category": "wallpaper_暗黑",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/17_04aecd01.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/17_04aecd01.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "暗黑",
+        "壁纸",
+        "动",
+        "漫",
+        ",",
+        " "
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_21",
+      "title": "G1BPOdgWEAEX1os",
+      "category": "wallpaper_暗黑",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/21_f143a4a1.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/21_f143a4a1.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "暗黑",
+        "壁纸",
+        "暗",
+        "黑",
+        ",",
+        " "
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_28",
+      "title": "G1ABfvBaEAM7Otv",
+      "category": "wallpaper_暗黑",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/28_7508db41.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/28_7508db41.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "暗黑",
+        "壁纸",
+        "暗",
+        "黑"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_29",
+      "title": "G1AdMdpbEAAHUzy",
+      "category": "wallpaper_暗黑",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/29_d4f0b9dd.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/29_d4f0b9dd.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "暗黑",
+        "壁纸",
+        "暗",
+        "黑"
+      ],
+      "type": "wallpaper"
+    },
+    {
+      "id": "wp_31",
+      "title": "G1BQxH6XkAABrPd",
+      "category": "wallpaper_暗黑",
+      "url": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/31_013224b3.webp",
+      "thumbUrl": "https://img389.oss-cn-beijing.aliyuncs.com/wallpaper/暗黑/31_013224b3.webp",
+      "width": 1080,
+      "height": 1920,
+      "tags": [
+        "暗黑",
+        "壁纸",
+        "暗",
+        "黑",
+        ",",
+        " "
+      ],
+      "type": "wallpaper"
+    },
     {
       "id": "cz_2024012619212184",
       "title": "抖音头像",

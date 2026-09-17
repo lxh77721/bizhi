@@ -103,7 +103,6 @@ export default function SourceList({
       hoverClass="opacity-90"
     >
       <Image className="w-full" mode="widthFix" src={assetUrl(item.thumbUrl)} lazyLoad />
-      <Text className="block px-2 py-2 text-xs text-gray-500 truncate">{item.title}</Text>
     </View>
   );
 
