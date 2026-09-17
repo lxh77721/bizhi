@@ -78,35 +78,48 @@ export class OssService {
   }
 
   /**
-   * 上传文件到七牛云，返回可访问 URL。
+   * 上传文件到对象存储，返回可访问 URL。
    */
   async upload(buffer: Buffer, fileName: string, contentType?: string): Promise<string> {
     const c = this.configService.get();
     const ak = (c.ossAccessKey || '').trim();
     const sk = (c.ossSecretKey || '').trim();
-    // 七牛云 AK/SK 标准长度均为 40 位；明显不符时提前给出可操作提示
-    if (!ak || !sk || ak.length < 20 || sk.length < 20) {
+    // AK/SK 明显过短时提前按通用规则提示（阿里云 AK 形如 LTAI…、七牛 AK/SK 通常 40 位)
+    if (!ak || !sk || ak.length < 10 || sk.length < 10) {
       throw new BadRequestException(
-        '七牛云 AccessKey/SecretKey 无效：请到七牛云「密钥管理」完整复制（AK/SK 通常均为 40 位）',
+        '对象存储 AccessKey/SecretKey 无效：请到对应云控制台完整复制 AccessKey ID / AccessKey Secret',
       );
     }
     const key = this.buildKey(fileName);
     const client = this.buildClient();
 
-    try {
-      await client.send(
+    const put = (acl: 'public-read' | undefined) =>
+      client.send(
         new PutObjectCommand({
           Bucket: c.ossBucket,
           Key: key,
           Body: buffer,
           ContentType: contentType || 'image/jpeg',
+          ...(acl ? { ACL: acl } : {}),
         }),
       );
+
+    // 优先尝试「公共读」ACL，使对象通过公网域名可匿名读取；
+    // 若 Bucket 已开启公共访问/ACL（允许公共读）则无需再手动配置。
+    // 若 Bucket 强制禁止 ACL（如开启“禁止公共访问”），则回退为默认私有上传，
+    // 此时需要到控制台把 Bucket 设为“公共读”，否则公网域名仍返回 403。
+    try {
+      await put('public-read');
     } catch (err: any) {
-      console.error('[OSS] 七牛云上传失败', err?.name, err?.message, err?.$metadata);
-      throw new BadRequestException(
-        `七牛云上传失败：${err?.name || ''} ${err?.message || '请检查 Endpoint / 区域 / AK / SK / 空间名'}`,
-      );
+      const m = `${err?.name || ''} ${err?.message || ''}`;
+      if (/ACL|AccessControl|AllAccessDisabled|NotSupported|AccessDenied|Forbidden/i.test(m)) {
+        await put(undefined);
+      } else {
+        console.error('[OSS] 上传失败', err?.name, err?.message, err?.$metadata);
+        throw new BadRequestException(
+          `对象存储上传失败：${err?.name || ''} ${err?.message || '请检查 Endpoint / 区域 / AK / SK / Bucket'}`,
+        );
+      }
     }
 
     if (c.ossPublicUrl) {
