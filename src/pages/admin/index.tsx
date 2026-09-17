@@ -270,22 +270,25 @@ function MaterialsTab() {
         name: 'file',
         header: authHeader(),
       });
-      const data = JSON.parse(res.data).data;
+      console.log('[admin] upload status=', res?.statusCode, 'data=', res?.data);
+      // 兼容：部分平台 res.data 已是对象，部分为需 JSON.parse 的字符串
+      const body = typeof res?.data === 'string' ? JSON.parse(res.data) : res.data;
+      const data = body?.data;
+      if (!data?.url) throw new Error('上传未返回图片地址');
       setEditing((prev) => {
         // 上传原图时同步生成预览缩略图（同一物理文件）
         const next = { ...prev, url: field === 'url' ? data.url : prev.url };
         if (field === 'url') {
           next.thumbUrl = next.thumbUrl || data.url;
-          const base = data.url.replace(/\.\w+$/, '');
-          void base;
           setAutoId(data.url.split('/').pop().replace(/\.\w+$/, ''));
         } else {
           next.thumbUrl = data.url;
         }
         return next;
       });
-    } catch (err) {
-      Taro.showToast({ title: '上传失败', icon: 'none' });
+    } catch (err: any) {
+      console.error('[admin] 上传失败', err);
+      Taro.showToast({ title: err?.message || '上传失败', icon: 'none' });
     }
   };
 
