@@ -484,12 +484,12 @@ function ConfigTab() {
     { key: 'aiSize', label: '生图尺寸', hint: 'SDK 仅支持 2K / 4K' },
   ];
   const ossFields: { key: keyof PubConfig; label: string; hint: string; password?: boolean }[] = [
-    { key: 'ossEndpoint', label: 'OSS 访问域名（七牛云）', hint: 'S3 兼容地址，如 https://s3-cn-east-1.qiniucs.com' },
-    { key: 'ossBucket', label: 'OSS 存储空间 (Bucket)', hint: '七牛云空间名称' },
-    { key: 'ossRegion', label: 'OSS 区域', hint: '默认 cn-east-1（华东）' },
-    { key: 'ossAccessKey', label: 'OSS Access Key', hint: '七牛云 AK（不向下发）', password: true },
-    { key: 'ossSecretKey', label: 'OSS Secret Key', hint: '七牛云 SK（不向下发）', password: true },
-    { key: 'ossPublicUrl', label: 'OSS 公开读域名', hint: '如 CDN/测试域名 bkt.clouddn.com；留空则素材用 30 天预签名 URL' },
+    { key: 'ossEndpoint', label: 'OSS 访问域名（七牛云）', hint: '不含桶名！华南 https://s3.cn-south-1.qiniucs.com；华东 s3.cn-east-1；华北 s3.cn-north-1' },
+    { key: 'ossBucket', label: 'OSS 存储空间 (Bucket)', hint: '七牛云空间名称（不要写进上面的 Endpoint）' },
+    { key: 'ossRegion', label: 'OSS 区域', hint: '须与 Endpoint 一致：cn-south-1 华南 / cn-east-1 华东 / cn-north-1 华北' },
+    { key: 'ossAccessKey', label: 'OSS Access Key', hint: '七牛云密钥管理中的 AK（通常 40 位，仅管理端可见）', password: true },
+    { key: 'ossSecretKey', label: 'OSS Secret Key', hint: '七牛云密钥管理中的 SK（通常 40 位，务必完整复制；仅管理端可见）', password: true },
+    { key: 'ossPublicUrl', label: 'OSS 公开读域名', hint: '空间绑定的已备案 CDN/自定义域名，可不带 https://；默认测试域名常被回收，建议绑定自有域名' },
   ];
 
   return (

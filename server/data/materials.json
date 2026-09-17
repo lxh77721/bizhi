@@ -1,0 +1,161 @@
+{
+  "categories": [
+    {
+      "key": "girl",
+      "label": "女生头像",
+      "icon": "Sparkles"
+    },
+    {
+      "key": "boy",
+      "label": "男生头像",
+      "icon": "Sun"
+    },
+    {
+      "key": "couple",
+      "label": "情侣头像",
+      "icon": "Heart"
+    },
+    {
+      "key": "landscape",
+      "label": "治愈风景壁纸",
+      "icon": "Mountain"
+    },
+    {
+      "key": "text",
+      "label": "极简文字壁纸",
+      "icon": "PenLine"
+    }
+  ],
+  "materials": [
+    {
+      "id": "girl-01",
+      "title": "樱花治愈女生头像",
+      "category": "girl",
+      "url": "/static/materials/girl-01.jpg",
+      "thumbUrl": "/static/materials/girl-01-thumb.jpg",
+      "width": 1024,
+      "height": 1280,
+      "tags": [
+        "女生头像",
+        "治愈",
+        "樱花",
+        "日系",
+        "头像"
+      ]
+    },
+    {
+      "id": "girl-02",
+      "title": "花语清新女生头像",
+      "category": "girl",
+      "url": "/static/materials/girl-02.jpg",
+      "thumbUrl": "/static/materials/girl-02-thumb.jpg",
+      "width": 1024,
+      "height": 1024,
+      "tags": [
+        "女生头像",
+        "清新",
+        "花朵",
+        "自然",
+        "头像"
+      ]
+    },
+    {
+      "id": "boy-01",
+      "title": "晴空治愈男生头像",
+      "category": "boy",
+      "url": "/static/materials/boy-01.jpg",
+      "thumbUrl": "/static/materials/boy-01-thumb.jpg",
+      "width": 1024,
+      "height": 820,
+      "tags": [
+        "男生头像",
+        "晴空",
+        "蓝色",
+        "治愈",
+        "头像"
+      ]
+    },
+    {
+      "id": "couple-01",
+      "title": "暖阳浪漫情侣头像",
+      "category": "couple",
+      "url": "/static/materials/couple-01.jpg",
+      "thumbUrl": "/static/materials/couple-01-thumb.jpg",
+      "width": 1024,
+      "height": 1280,
+      "tags": [
+        "情侣头像",
+        "浪漫",
+        "温暖",
+        "甜蜜",
+        "头像"
+      ]
+    },
+    {
+      "id": "landscape-01",
+      "title": "雪山晨光治愈壁纸",
+      "category": "landscape",
+      "url": "/static/materials/landscape-01.jpg",
+      "thumbUrl": "/static/materials/landscape-01-thumb.jpg",
+      "width": 1440,
+      "height": 1150,
+      "tags": [
+        "风景壁纸",
+        "雪山",
+        "湖泊",
+        "晨光",
+        "手机壁纸",
+        "治愈壁纸"
+      ]
+    },
+    {
+      "id": "landscape-02",
+      "title": "落日海岛氛围壁纸",
+      "category": "landscape",
+      "url": "/static/materials/landscape-02.jpg",
+      "thumbUrl": "/static/materials/landscape-02-thumb.jpg",
+      "width": 1280,
+      "height": 1700,
+      "tags": [
+        "风景壁纸",
+        "落日",
+        "海岛",
+        "氛围",
+        "手机壁纸",
+        "治愈壁纸"
+      ]
+    },
+    {
+      "id": "text-01",
+      "title": "越来越好极简文字壁纸",
+      "category": "text",
+      "url": "/static/materials/text-01.jpg",
+      "thumbUrl": "/static/materials/text-01-thumb.jpg",
+      "width": 1024,
+      "height": 1440,
+      "tags": [
+        "极简壁纸",
+        "文字壁纸",
+        "励志",
+        "治愈",
+        "手机壁纸"
+      ]
+    },
+    {
+      "id": "text-02",
+      "title": "今天也要开心文字壁纸",
+      "category": "text",
+      "url": "/static/materials/text-02.jpg",
+      "thumbUrl": "/static/materials/text-02-thumb.jpg",
+      "width": 1024,
+      "height": 1024,
+      "tags": [
+        "极简壁纸",
+        "文字壁纸",
+        "开心",
+        "治愈",
+        "手机壁纸"
+      ]
+    }
+  ]
+}
