@@ -62,7 +62,9 @@ export default function SourceList({
         });
         const d = (res.data as any)?.data;
         setList(d?.list || []);
-        setCategories(d?.categories || []);
+        setCategories(
+          (d?.categories || []).filter((c: any) => (c?.type ? c.type === type : type === 'avatar')),
+        );
       } catch (err) {
         console.error(`[${title}] 加载素材失败`, err);
         setList([]);

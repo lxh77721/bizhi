@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Settings, Images, FolderTree, LayoutDashboard, LogOut, Upload, Download } from 'lucide-react-taro';
+import { Settings, Images, LayoutDashboard, LogOut, Upload, Download, Trash2 } from 'lucide-react-taro';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 /** 抓取弹窗：可选源与分类 */
@@ -143,6 +143,28 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   };
   const [crawling, setCrawling] = useState(false);
   const [crawlOpen, setCrawlOpen] = useState(false);
+
+  /** 清空素材库（分类+素材全部重建，重新抓取后恢复） */
+  const confirmPurge = useCallback(() => {
+    Taro.showModal({
+      title: '清空素材库',
+      content: '将清空本地全部分类与素材，之后点击「抓取素材」会从网站同步分类并重新抓图。确认清空？',
+      confirmText: '清空',
+      confirmColor: '#ef4444',
+      success: async (r) => {
+        if (!r.confirm) return;
+        try {
+          await Network.request({ url: '/api/admin/purge', method: 'POST', header: authHeader() });
+          Taro.showToast({ title: '已清空，请重新抓取', icon: 'success' });
+          setTimeout(() => Taro.redirectTo({ url: '/pages/admin/index' }), 600);
+        } catch (e) {
+          console.error('清空失败', e);
+          Taro.showToast({ title: '清空失败', icon: 'none' });
+        }
+      },
+    });
+  }, []);
+
   const [crawlSource, setCrawlSource] = useState<'avatar' | 'wallpaper'>('avatar');
   const [selCats, setSelCats] = useState<string[]>([]);
   const [qty, setQty] = useState('40');
@@ -198,6 +220,10 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           <Button size="sm" variant="outline" onClick={() => setCrawlOpen(true)} disabled={crawling}>
             <Download size={15} className="mr-1" color={crawling ? '#9ca3af' : '#4c9df5'} />
             <Text>{crawling ? '抓取中…' : '抓取素材'}</Text>
+          </Button>
+          <Button size="sm" variant="outline" onClick={confirmPurge}>
+            <Trash2 size={15} className="mr-1" color="#ef4444" />
+            <Text>清空数据</Text>
           </Button>
           <Button size="sm" variant="ghost" onClick={logout}>
             <LogOut size={16} className="mr-1" color="#4c9df5" />
@@ -289,7 +315,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
       <Tabs value={tab} onValueChange={setTab}>
         <View className="bg-white px-2 py-2 flex border-b border-slate-100 sticky top-0 z-10">
-          <TabsList className="w-full grid-cols-4 gap-1">
+          <TabsList className="w-full grid-cols-3 gap-1">
             <TabsTrigger value="stats">
               <LayoutDashboard size={15} className="mr-1" color="#4c9df5" />
               <Text>看板</Text>
@@ -297,10 +323,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             <TabsTrigger value="materials">
               <Images size={15} className="mr-1" color="#4c9df5" />
               <Text>素材</Text>
-            </TabsTrigger>
-            <TabsTrigger value="categories">
-              <FolderTree size={15} className="mr-1" color="#4c9df5" />
-              <Text>分类</Text>
             </TabsTrigger>
             <TabsTrigger value="config">
               <Settings size={15} className="mr-1" color="#4c9df5" />
@@ -315,9 +337,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           </TabsContent>
           <TabsContent value="materials">
             <MaterialsTab />
-          </TabsContent>
-          <TabsContent value="categories">
-            <CategoriesTab />
           </TabsContent>
           <TabsContent value="config">
             <ConfigTab />
@@ -601,63 +620,6 @@ function MaterialsTab() {
               <Button size="sm" variant="destructive" onClick={() => remove(m.id)}>
                 <Text>删</Text>
               </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-/* ----------------------------- 分类管理 ----------------------------- */
-function CategoriesTab() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [key, setKey] = useState('');
-  const [label, setLabel] = useState('');
-  const [icon, setIcon] = useState('');
-
-  const load = useCallback(async () => {
-    const res = await Network.request({ url: '/api/admin/materials', header: authHeader() });
-    setCategories((res.data as any)?.data?.categories || []);
-  }, []);
-  const add = async () => {
-    if (!key || !label) return;
-    await Network.request({ url: '/api/admin/categories', method: 'POST', header: authHeader(), data: { key, label, icon } });
-    setKey(''); setLabel(''); setIcon('');
-    load();
-  };
-  const remove = async (k: string) => {
-    await Network.request({ url: `/api/admin/categories/${k}`, method: 'DELETE', header: authHeader() });
-    load();
-  };
-
-  useEffect(() => { load(); }, [load]);
-
-  return (
-    <View className="p-4">
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <Text className="block text-sm font-semibold">新增分类（key 对应素材 category 字段）</Text>
-          <View className="flex gap-2">
-            <Input placeholder="key（如 nature / cartoon）" value={key} onInput={(e) => setKey(e.detail.value)} />
-          </View>
-          <View className="flex gap-2">
-            <View className="flex-1"><Input placeholder="展示名（如 治愈风景）" value={label} onInput={(e) => setLabel(e.detail.value)} /></View>
-            <View className="flex-1"><Input placeholder="图标名（可选）" value={icon} onInput={(e) => setIcon(e.detail.value)} /></View>
-            <Button onClick={add}><Text>新增</Text></Button>
-          </View>
-        </CardContent>
-      </Card>
-      <Text className="block text-sm text-slate-500 mt-5 mb-2">分类列表（{categories.length}）</Text>
-      <View className="space-y-2">
-        {categories.map((c) => (
-          <Card key={c.key}>
-            <CardContent className="p-3 flex items-center justify-between">
-              <View className="flex items-center gap-2">
-                <Badge variant="default"><Text>{c.label}</Text></Badge>
-                <Text className="text-xs text-slate-400">{c.key}{c.icon ? ` · icon=${c.icon}` : ''}</Text>
-              </View>
-              <Button size="sm" variant="destructive" onClick={() => remove(c.key)}><Text>删</Text></Button>
             </CardContent>
           </Card>
         ))}

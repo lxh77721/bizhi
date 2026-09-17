@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@/config/config.service';
 
 /**
@@ -106,7 +107,19 @@ export class OssService {
     if (c.ossPublicUrl) {
       return `${this.normalizePublicUrl(c.ossPublicUrl)}/${key}`;
     }
-    // 未配置公开读域名：返回 path-style 源站地址（私有空间需额外签名，建议绑定公开域名）
-    return `${this.normalizeEndpoint(c.ossEndpoint, c.ossBucket)}/${c.ossBucket}/${key}`;
+    // 未配置公开读域名：生成 SigV4 预签名 GET URL 作为临时访问地址。
+    // 注意：AWS SigV4 预签名最大有效期为一周（604800s），超出会抛
+    // “Signature version 4 presigned URLs must have an expiration date
+    //  less than one week in the future”。建议在七牛开通公开读域名后
+    // 填入“OSS 公开读域名”，以获得长期稳定的访问地址。
+    try {
+      const signed = await getSignedUrl(client, new GetObjectCommand({ Bucket: c.ossBucket, Key: key }), {
+        expiresIn: 604800,
+      });
+      return signed;
+    } catch (err: any) {
+      console.warn('[OSS] 预签名生成失败，回退公开 path-style URL', err?.message);
+      return `https://${c.ossBucket}.${c.ossRegion || 'cn-east-1'}.qiniucs.com/${key}`;
+    }
   }
 }

@@ -79,6 +79,17 @@ export class AdminController {
     };
   }
 
+  /* ---------------------- 清空素材库（分类+素材全部重建） ---------------------- */
+
+  @Post('purge')
+  purge() {
+    const data = this.materialsService.getData();
+    data.categories = [];
+    data.materials = [];
+    this.materialsService.saveData(data);
+    return { status: 'success', data: { purged: true, materialCount: 0, categoryCount: 0 } };
+  }
+
   /* ------------------------- 素材管理 ------------------------- */
 
   @Get('materials')

@@ -1,9 +1,12 @@
 import { Global, Module } from '@nestjs/common';
 import { FileStore } from '@/common/file-store.service';
+import { OssService } from '@/common/oss.service';
+import { ConfigModule } from '@/config/config.module';
 
 @Global()
 @Module({
-  providers: [FileStore],
-  exports: [FileStore],
+  imports: [ConfigModule],
+  providers: [FileStore, OssService],
+  exports: [FileStore, OssService],
 })
 export class CommonModule {}

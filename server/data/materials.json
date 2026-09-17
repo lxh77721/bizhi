@@ -1,226 +1,194 @@
 {
   "categories": [
     {
-      "key": "girl",
-      "label": "女生头像",
-      "icon": "Sparkles"
-    },
-    {
-      "key": "boy",
-      "label": "男生头像",
-      "icon": "Sun"
-    },
-    {
-      "key": "couple",
-      "label": "情侣头像",
-      "icon": "Heart"
-    },
-    {
-      "key": "landscape",
-      "label": "治愈风景壁纸",
-      "icon": "Mountain"
-    },
-    {
-      "key": "text",
-      "label": "极简文字壁纸",
-      "icon": "PenLine"
-    },
-    {
-      "key": "ceshi",
-      "label": "测试分类",
-      "icon": ""
-    },
-    {
-      "key": "crawler_weixintouxiang",
-      "label": "weixintouxiang",
-      "icon": ""
-    },
-    {
       "key": "avatar_weixintouxiang",
-      "label": "weixintouxiang",
-      "icon": ""
+      "label": "微信头像",
+      "type": "avatar"
     },
     {
-      "key": "wallpaper_艺术",
-      "label": "艺术",
-      "icon": ""
+      "key": "avatar_nanshengtouxiang",
+      "label": "男生头像",
+      "type": "avatar"
+    },
+    {
+      "key": "avatar_nvshengtouxiang",
+      "label": "女生头像",
+      "type": "avatar"
+    },
+    {
+      "key": "avatar_douyintouxiang",
+      "label": "抖音头像",
+      "type": "avatar"
     }
   ],
   "materials": [
     {
-      "id": "wp_14",
-      "title": "G1ALFhYWEAAcT1s",
-      "category": "wallpaper_艺术",
-      "url": "/static/materials/wallpaper/wp_14.webp",
-      "thumbUrl": "/static/materials/wallpaper/wp_14_thumb.webp",
-      "width": 1080,
-      "height": 1920,
-      "tags": [
-        "艺术",
-        "壁纸",
-        "抓取"
-      ],
-      "type": "wallpaper"
-    },
-    {
-      "id": "cz_26a9d9a1d3",
-      "title": "weixintouxiang 2",
-      "category": "avatar_weixintouxiang",
-      "url": "/static/materials/avatar/202401280252322.jpg",
-      "thumbUrl": "/static/materials/avatar/202401280252322.jpg",
+      "id": "cz_2024012618167640",
+      "title": "抖音头像",
+      "category": "avatar_douyintouxiang",
+      "url": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/douyintouxiang/2024012618167640.jpg_1789629980308_2b671959.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072620Z&X-Amz-Expires=604800&X-Amz-Signature=8b169d6d79853c4b9de2e0418cad96b3e4f89a610996d117fe064bdd9c838506&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "thumbUrl": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/douyintouxiang/2024012618167640.jpg_1789629980308_2b671959.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072620Z&X-Amz-Expires=604800&X-Amz-Signature=8b169d6d79853c4b9de2e0418cad96b3e4f89a610996d117fe064bdd9c838506&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
       "width": 1024,
       "height": 1024,
       "tags": [
-        "weixintouxiang",
-        "头像",
-        "抓取"
+        "抖音头像",
+        "头像"
       ],
       "type": "avatar"
     },
     {
-      "id": "cz_8713d168e8",
-      "title": "weixintouxiang 1",
-      "category": "avatar_weixintouxiang",
-      "url": "/static/materials/avatar/2024012714482134.jpg",
-      "thumbUrl": "/static/materials/avatar/2024012714482134.jpg",
+      "id": "cz_2024012619211593",
+      "title": "抖音头像",
+      "category": "avatar_douyintouxiang",
+      "url": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/douyintouxiang/2024012619211593.jpg_1789629979607_a755e07a.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072619Z&X-Amz-Expires=604800&X-Amz-Signature=b61dd4ba26bb2ed77eb07e400ffabc7dab2ba5056497c6c269937eb275f3a207&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "thumbUrl": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/douyintouxiang/2024012619211593.jpg_1789629979607_a755e07a.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072619Z&X-Amz-Expires=604800&X-Amz-Signature=b61dd4ba26bb2ed77eb07e400ffabc7dab2ba5056497c6c269937eb275f3a207&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
       "width": 1024,
       "height": 1024,
       "tags": [
-        "weixintouxiang",
-        "头像",
-        "抓取"
+        "抖音头像",
+        "头像"
       ],
       "type": "avatar"
     },
     {
-      "id": "girl-01",
-      "title": "樱花治愈女生头像",
-      "category": "girl",
-      "url": "/static/materials/girl-01.jpg",
-      "thumbUrl": "/static/materials/girl-01-thumb.jpg",
+      "id": "cz_2024012622344830",
+      "title": "抖音头像",
+      "category": "avatar_douyintouxiang",
+      "url": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/douyintouxiang/2024012622344830.jpg_1789629978898_20bc34b4.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072619Z&X-Amz-Expires=604800&X-Amz-Signature=f3c1c1ab10d4e4c01eaea236fab1a6fa39c6e538b92301b96b1ba3b216812e1f&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "thumbUrl": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/douyintouxiang/2024012622344830.jpg_1789629978898_20bc34b4.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072619Z&X-Amz-Expires=604800&X-Amz-Signature=f3c1c1ab10d4e4c01eaea236fab1a6fa39c6e538b92301b96b1ba3b216812e1f&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
       "width": 1024,
-      "height": 1280,
+      "height": 1024,
       "tags": [
-        "女生头像",
-        "治愈",
-        "樱花",
-        "日系",
+        "抖音头像",
         "头像"
-      ]
+      ],
+      "type": "avatar"
     },
     {
-      "id": "girl-02",
-      "title": "花语清新女生头像",
-      "category": "girl",
-      "url": "/static/materials/girl-02.jpg",
-      "thumbUrl": "/static/materials/girl-02-thumb.jpg",
+      "id": "cz_2024012712472346",
+      "title": "女生头像",
+      "category": "avatar_nvshengtouxiang",
+      "url": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/nvshengtouxiang/2024012712472346.jpg_1789629978043_ba9285b8.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072618Z&X-Amz-Expires=604800&X-Amz-Signature=2ba35926057f0f83a847b1649d19b98497c621b72dcc9255f310363a7e1774f9&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "thumbUrl": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/nvshengtouxiang/2024012712472346.jpg_1789629978043_ba9285b8.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072618Z&X-Amz-Expires=604800&X-Amz-Signature=2ba35926057f0f83a847b1649d19b98497c621b72dcc9255f310363a7e1774f9&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
       "width": 1024,
       "height": 1024,
       "tags": [
         "女生头像",
-        "清新",
-        "花朵",
-        "自然",
         "头像"
-      ]
+      ],
+      "type": "avatar"
     },
     {
-      "id": "boy-01",
-      "title": "晴空治愈男生头像",
-      "category": "boy",
-      "url": "/static/materials/boy-01.jpg",
-      "thumbUrl": "/static/materials/boy-01-thumb.jpg",
+      "id": "cz_2024012620274392",
+      "title": "女生头像",
+      "category": "avatar_nvshengtouxiang",
+      "url": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/nvshengtouxiang/2024012620274392.jpg_1789629977379_c05ae6aa.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072617Z&X-Amz-Expires=604800&X-Amz-Signature=cc937bc7e23d643db876b2268d7fe7d9341a7f0d5601922fd3941a93dd4d5c18&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "thumbUrl": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/nvshengtouxiang/2024012620274392.jpg_1789629977379_c05ae6aa.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072617Z&X-Amz-Expires=604800&X-Amz-Signature=cc937bc7e23d643db876b2268d7fe7d9341a7f0d5601922fd3941a93dd4d5c18&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
       "width": 1024,
-      "height": 820,
+      "height": 1024,
+      "tags": [
+        "女生头像",
+        "头像"
+      ],
+      "type": "avatar"
+    },
+    {
+      "id": "cz_2024012616125340",
+      "title": "女生头像",
+      "category": "avatar_nvshengtouxiang",
+      "url": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/nvshengtouxiang/2024012616125340.jpg_1789629976708_a6852496.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072616Z&X-Amz-Expires=604800&X-Amz-Signature=daeb3d31df58eebdafabf9eb866eb27e153dfe515e6ff9214289fdf225dc822f&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "thumbUrl": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/nvshengtouxiang/2024012616125340.jpg_1789629976708_a6852496.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072616Z&X-Amz-Expires=604800&X-Amz-Signature=daeb3d31df58eebdafabf9eb866eb27e153dfe515e6ff9214289fdf225dc822f&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "width": 1024,
+      "height": 1024,
+      "tags": [
+        "女生头像",
+        "头像"
+      ],
+      "type": "avatar"
+    },
+    {
+      "id": "cz_202401260676565",
+      "title": "男生头像",
+      "category": "avatar_nanshengtouxiang",
+      "url": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/nanshengtouxiang/202401260676565.jpg_1789629975845_33eb903c.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072616Z&X-Amz-Expires=604800&X-Amz-Signature=de70d66d9211bbcc03828cc6f74e8b30c30580077d561859258202ef4371d1aa&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "thumbUrl": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/nanshengtouxiang/202401260676565.jpg_1789629975845_33eb903c.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072616Z&X-Amz-Expires=604800&X-Amz-Signature=de70d66d9211bbcc03828cc6f74e8b30c30580077d561859258202ef4371d1aa&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "width": 1024,
+      "height": 1024,
       "tags": [
         "男生头像",
-        "晴空",
-        "蓝色",
-        "治愈",
         "头像"
-      ]
+      ],
+      "type": "avatar"
     },
     {
-      "id": "couple-01",
-      "title": "暖阳浪漫情侣头像",
-      "category": "couple",
-      "url": "/static/materials/couple-01.jpg",
-      "thumbUrl": "/static/materials/couple-01-thumb.jpg",
-      "width": 1024,
-      "height": 1280,
-      "tags": [
-        "情侣头像",
-        "浪漫",
-        "温暖",
-        "甜蜜",
-        "头像"
-      ]
-    },
-    {
-      "id": "landscape-01",
-      "title": "雪山晨光治愈壁纸",
-      "category": "landscape",
-      "url": "/static/materials/landscape-01.jpg",
-      "thumbUrl": "/static/materials/landscape-01-thumb.jpg",
-      "width": 1440,
-      "height": 1150,
-      "tags": [
-        "风景壁纸",
-        "雪山",
-        "湖泊",
-        "晨光",
-        "手机壁纸",
-        "治愈壁纸"
-      ]
-    },
-    {
-      "id": "landscape-02",
-      "title": "落日海岛氛围壁纸",
-      "category": "landscape",
-      "url": "/static/materials/landscape-02.jpg",
-      "thumbUrl": "/static/materials/landscape-02-thumb.jpg",
-      "width": 1280,
-      "height": 1700,
-      "tags": [
-        "风景壁纸",
-        "落日",
-        "海岛",
-        "氛围",
-        "手机壁纸",
-        "治愈壁纸"
-      ]
-    },
-    {
-      "id": "text-01",
-      "title": "越来越好极简文字壁纸",
-      "category": "text",
-      "url": "/static/materials/text-01.jpg",
-      "thumbUrl": "/static/materials/text-01-thumb.jpg",
-      "width": 1024,
-      "height": 1440,
-      "tags": [
-        "极简壁纸",
-        "文字壁纸",
-        "励志",
-        "治愈",
-        "手机壁纸"
-      ]
-    },
-    {
-      "id": "text-02",
-      "title": "今天也要开心文字壁纸",
-      "category": "text",
-      "url": "/static/materials/text-02.jpg",
-      "thumbUrl": "/static/materials/text-02-thumb.jpg",
+      "id": "cz_2024012716488559",
+      "title": "男生头像",
+      "category": "avatar_nanshengtouxiang",
+      "url": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/nanshengtouxiang/2024012716488559.jpg_1789629975203_de6b6a15.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072615Z&X-Amz-Expires=604800&X-Amz-Signature=f54eebd8fe6876a6c03c733af00a85b0d5618e8fb172471385a58fd7521c0e13&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "thumbUrl": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/nanshengtouxiang/2024012716488559.jpg_1789629975203_de6b6a15.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072615Z&X-Amz-Expires=604800&X-Amz-Signature=f54eebd8fe6876a6c03c733af00a85b0d5618e8fb172471385a58fd7521c0e13&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
       "width": 1024,
       "height": 1024,
       "tags": [
-        "极简壁纸",
-        "文字壁纸",
-        "开心",
-        "治愈",
-        "手机壁纸"
-      ]
+        "男生头像",
+        "头像"
+      ],
+      "type": "avatar"
+    },
+    {
+      "id": "cz_2024012700380745",
+      "title": "男生头像",
+      "category": "avatar_nanshengtouxiang",
+      "url": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/nanshengtouxiang/2024012700380745.jpg_1789629974531_f3be75a1.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072614Z&X-Amz-Expires=604800&X-Amz-Signature=63c76ed37a415b7cc27ca29276379b780566615aadf9ba8a2b1fc3b3e8d506db&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "thumbUrl": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/nanshengtouxiang/2024012700380745.jpg_1789629974531_f3be75a1.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072614Z&X-Amz-Expires=604800&X-Amz-Signature=63c76ed37a415b7cc27ca29276379b780566615aadf9ba8a2b1fc3b3e8d506db&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "width": 1024,
+      "height": 1024,
+      "tags": [
+        "男生头像",
+        "头像"
+      ],
+      "type": "avatar"
+    },
+    {
+      "id": "cz_2024012621286632",
+      "title": "微信头像",
+      "category": "avatar_weixintouxiang",
+      "url": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/weixintouxiang/2024012621286632.jpg_1789629973683_27504fac.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072613Z&X-Amz-Expires=604800&X-Amz-Signature=b8a52b3d489a69d13b57ebce71ce621fdee0d6b69a5e0830e1fcdd0fc2605bb1&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "thumbUrl": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/weixintouxiang/2024012621286632.jpg_1789629973683_27504fac.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072613Z&X-Amz-Expires=604800&X-Amz-Signature=b8a52b3d489a69d13b57ebce71ce621fdee0d6b69a5e0830e1fcdd0fc2605bb1&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "width": 1024,
+      "height": 1024,
+      "tags": [
+        "微信头像",
+        "头像"
+      ],
+      "type": "avatar"
+    },
+    {
+      "id": "cz_202401280252322",
+      "title": "微信头像",
+      "category": "avatar_weixintouxiang",
+      "url": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/weixintouxiang/202401280252322.jpg_1789629973003_043c7f9a.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072613Z&X-Amz-Expires=604800&X-Amz-Signature=b566ade9ab036ed2f8bbdf16ade9aa7d7281bb59180bc5b5ae1281f64f9d51a7&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "thumbUrl": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/weixintouxiang/202401280252322.jpg_1789629973003_043c7f9a.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072613Z&X-Amz-Expires=604800&X-Amz-Signature=b566ade9ab036ed2f8bbdf16ade9aa7d7281bb59180bc5b5ae1281f64f9d51a7&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "width": 1024,
+      "height": 1024,
+      "tags": [
+        "微信头像",
+        "头像"
+      ],
+      "type": "avatar"
+    },
+    {
+      "id": "cz_2024012714482134",
+      "title": "微信头像",
+      "category": "avatar_weixintouxiang",
+      "url": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/weixintouxiang/2024012714482134.jpg_1789629972310_f563b9c8.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072612Z&X-Amz-Expires=604800&X-Amz-Signature=97b917ae0aa25244925e6158117e59ed5676bc2bcd1c5decc04eb585b4f023f2&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "thumbUrl": "https://s3.cn-south-1.qiniucs.com/image01231/avatar/weixintouxiang/2024012714482134.jpg_1789629972310_f563b9c8.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=i0ru-JikOkpUKWSoUOprSP0ty4mwwePx99-fMD_Z%2F20260917%2Fcn-south-1%2Fs3%2Faws4_request&X-Amz-Date=20260917T072612Z&X-Amz-Expires=604800&X-Amz-Signature=97b917ae0aa25244925e6158117e59ed5676bc2bcd1c5decc04eb585b4f023f2&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject",
+      "width": 1024,
+      "height": 1024,
+      "tags": [
+        "微信头像",
+        "头像"
+      ],
+      "type": "avatar"
     }
   ]
 }

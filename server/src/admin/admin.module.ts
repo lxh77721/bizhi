@@ -5,12 +5,11 @@ import { AdminAuthController, AdminController } from '@/admin/admin.controller';
 import { MaterialsModule } from '@/materials/materials.module';
 import { ConfigModule } from '@/config/config.module';
 import { StatsModule } from '@/stats/stats.module';
-import { OssService } from '@/common/oss.service';
 import { CrawlerModule } from '@/crawler/crawler.module';
 
 @Module({
   imports: [MaterialsModule, ConfigModule, StatsModule, CrawlerModule],
-  providers: [AdminService, AdminGuard, OssService],
+  providers: [AdminService, AdminGuard],
   controllers: [AdminAuthController, AdminController],
 })
 export class AdminModule {}

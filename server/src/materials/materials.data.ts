@@ -49,6 +49,8 @@ export interface Category {
   key: string;
   label: string;
   icon?: string;
+  /** 分类归属：avatar=头像频道、wallpaper=壁纸频道；缺省视为头像 */
+  type?: 'avatar' | 'wallpaper';
 }
 
 /** 首页分类导航标签（种子数据，可被后台动态修改并写回 data 文件） */
