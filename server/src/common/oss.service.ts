@@ -48,10 +48,15 @@ export class OssService {
 
   private buildClient(): S3Client {
     const c = this.configService.get();
+    const ep = this.normalizeEndpoint(c.ossEndpoint, c.ossBucket);
+    // 兼容两类 S3 服务商：
+    // - 七牛云采用 path-style（endpoint 形如 https://s3-<region>.qiniucs.com，请求为 endpoint/bucket/key）
+    // - 阿里云等标准 S3 采用虚拟主机风格（<bucket>.<endpoint>，请求 host 即 Bucket 公网域名，更好配合公开读域名）
+    const virtualHosted = !/qiniucs/i.test(ep);
     return new S3Client({
-      endpoint: this.normalizeEndpoint(c.ossEndpoint, c.ossBucket),
+      endpoint: ep,
       region: (c.ossRegion || 'cn-east-1').trim(),
-      forcePathStyle: true,
+      forcePathStyle: !virtualHosted,
       credentials: {
         accessKeyId: (c.ossAccessKey || '').trim(),
         secretAccessKey: (c.ossSecretKey || '').trim(),
