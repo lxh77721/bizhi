@@ -29,9 +29,56 @@
       "key": "ceshi",
       "label": "测试分类",
       "icon": ""
+    },
+    {
+      "key": "crawler_weixintouxiang",
+      "label": "weixintouxiang",
+      "icon": ""
     }
   ],
   "materials": [
+    {
+      "id": "cz_83dea6a3b6",
+      "title": "weixintouxiang 3",
+      "category": "crawler_weixintouxiang",
+      "url": "/static/materials/crawler/2024012621286632.jpg",
+      "thumbUrl": "/static/materials/crawler/2024012621286632.jpg",
+      "width": 1024,
+      "height": 1024,
+      "tags": [
+        "weixintouxiang",
+        "头像",
+        "抓取"
+      ]
+    },
+    {
+      "id": "cz_26a9d9a1d3",
+      "title": "weixintouxiang 2",
+      "category": "crawler_weixintouxiang",
+      "url": "/static/materials/crawler/202401280252322.jpg",
+      "thumbUrl": "/static/materials/crawler/202401280252322.jpg",
+      "width": 1024,
+      "height": 1024,
+      "tags": [
+        "weixintouxiang",
+        "头像",
+        "抓取"
+      ]
+    },
+    {
+      "id": "cz_8713d168e8",
+      "title": "weixintouxiang 1",
+      "category": "crawler_weixintouxiang",
+      "url": "/static/materials/crawler/2024012714482134.jpg",
+      "thumbUrl": "/static/materials/crawler/2024012714482134.jpg",
+      "width": 1024,
+      "height": 1024,
+      "tags": [
+        "weixintouxiang",
+        "头像",
+        "抓取"
+      ]
+    },
     {
       "id": "girl-01",
       "title": "樱花治愈女生头像",

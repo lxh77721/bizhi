@@ -25,6 +25,7 @@ import { MaterialsService } from '@/materials/materials.service';
 import { ConfigService, AppConfig } from '@/config/config.service';
 import { StatsService } from '@/stats/stats.service';
 import { OssService } from '@/common/oss.service';
+import { CrawlerService } from '@/crawler/crawler.service';
 import { MaterialItem, Category } from '@/materials/materials.data';
 
 /** 登录 / 注销（无需守卫） */
@@ -59,6 +60,7 @@ export class AdminController {
     private readonly configService: ConfigService,
     private readonly statsService: StatsService,
     private readonly oss: OssService,
+    private readonly crawler: CrawlerService,
   ) {}
 
   /* ------------------------------ 统计看板 ------------------------------ */
@@ -181,6 +183,23 @@ export class AdminController {
 
   /* ------------------------- 图片上传（对象存储 / 物理存储） ------------------------- */
 
+  /** POST /api/admin/crawl  手动触发素材抓取（定时任务默认每天凌晨 4 点自动执行）
+   *  body: { categories?: string[], maxPages?: number, maxImagesPerCategory?: number } */
+  @Post('crawl')
+  async crawl(
+    @Body() body: { categories?: string[]; maxPages?: number; maxImagesPerCategory?: number },
+  ): Promise<Record<string, unknown>> {
+    if (this.crawler.isRunning()) {
+      throw new BadRequestException('抓取任务正在进行中，请稍后查看结果');
+    }
+    const result = await this.crawler.run({
+      categories: body.categories,
+      maxPages: body.maxPages,
+      maxImagesPerCategory: body.maxImagesPerCategory,
+    });
+    return { status: 'success', data: result };
+  }
+
   /** POST /api/admin/upload  multipart: file=图片
    *  - 若后台已配置七牛云 OSS：上传到 OSS 并返回可访问 URL
    *  - 否则回退本地物理存储 server/public/materials */
@@ -203,7 +222,7 @@ export class AdminController {
     }
 
     // 未配置 OSS 时：保存到本地物理存储（server/public/materials，经 /static 访问）
-    const dir = path.resolve(process.cwd(), 'server', 'public', 'materials');
+    const dir = path.resolve(process.cwd(), 'public', 'materials');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, filename), file.buffer);
     return { status: 'success', data: { url: `/static/materials/${filename}` } };

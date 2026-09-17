@@ -116,16 +116,40 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     Taro.removeStorageSync(TOKEN_KEY);
     onLogout();
   };
+  const [crawling, setCrawling] = useState(false);
+  const handleCrawl = useCallback(async () => {
+    if (crawling) return;
+    setCrawling(true);
+    try {
+      Taro.showToast({ title: '开始抓取头像…', icon: 'none' });
+      const res = await Network.request({
+        url: '/api/admin/crawl',
+        method: 'POST',
+        header: authHeader(),
+      });
+      const d = (res.data as any)?.data;
+      Taro.showToast({ title: `新增 ${d?.created ?? 0} 张头像`, icon: 'success' });
+    } catch (e: any) {
+      Taro.showToast({ title: (e?.data as any)?.message || '抓取失败，请查看后端日志', icon: 'none' });
+    } finally {
+      setCrawling(false);
+    }
+  }, [crawling]);
 
   return (
     <View className="min-h-screen bg-slate-100">
       {/* 顶栏 */}
       <View className="bg-white px-4 py-3 flex items-center justify-between border-b border-slate-200">
         <Text className="text-base font-semibold">管理后台</Text>
-        <Button size="sm" variant="ghost" onClick={logout}>
-          <LogOut size={16} className="mr-1" color="#4c9df5" />
-          <Text>退出</Text>
-        </Button>
+        <View style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Button size="sm" variant="outline" onClick={handleCrawl} disabled={crawling}>
+            <Text>{crawling ? '抓取中…' : '抓取素材'}</Text>
+          </Button>
+          <Button size="sm" variant="ghost" onClick={logout}>
+            <LogOut size={16} className="mr-1" color="#4c9df5" />
+            <Text>退出</Text>
+          </Button>
+        </View>
       </View>
 
       <Tabs value={tab} onValueChange={setTab}>
