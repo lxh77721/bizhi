@@ -249,4 +249,65 @@ export class AdminController {
     fs.writeFileSync(path.join(dir, filename), file.buffer);
     return { status: 'success', data: { url: `/static/materials/${filename}` } };
   }
+
+  /* ---------------- 傻瓜式：分类（只需名字） ---------------- */
+
+  /** POST /api/admin/category  body: { name, type } */
+  @Post('category')
+  addSimpleCategory(@Body() body: { name?: string; type?: 'avatar' | 'wallpaper' }) {
+    try {
+      const cat = this.materialsService.addCategory(
+        body.name || '',
+        body.type === 'wallpaper' ? 'wallpaper' : 'avatar',
+      );
+      return { status: 'success', data: cat };
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
+  }
+
+  /** DELETE /api/admin/category/:key */
+  @Delete('category/:key')
+  removeSimpleCategory(@Param('key') key: string) {
+    try {
+      this.materialsService.removeCategory(key);
+      return { status: 'success' };
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
+  }
+
+  /* ---------------- 傻瓜式：上传图片并入库（选分类 + 图片） ---------------- */
+
+  /** POST /api/admin/upload-create  multipart: file + 表单 category
+   *  一步完成：存到 OSS/本地 → 自动补全素材信息入库 → 返回素材（含 8 位口令码） */
+  @Post('upload-create')
+  @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
+  async uploadAndCreate(
+    @UploadedFile() file: any,
+    @Body() body: { category?: string },
+  ) {
+    if (!file || !file.buffer) throw new BadRequestException('请选择图片');
+    if (!body.category) throw new BadRequestException('请选择分类');
+    const originalExt = (file.originalname || 'jpg').split('.').pop() || 'jpg';
+    const ext = /^[a-zA-Z0-9]{2,5}$/.test(originalExt) ? originalExt : 'jpg';
+    const filename = `m-${Date.now()}-${randomBytes(4).toString('hex')}.${ext}`;
+
+    let url: string;
+    if (this.oss.isConfigured()) {
+      url = await this.oss.upload(file.buffer, `materials/${filename}`, file.mimetype || 'image/jpeg');
+    } else {
+      const dir = path.resolve(process.cwd(), 'public', 'materials');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, filename), file.buffer);
+      url = `/static/materials/${filename}`;
+    }
+
+    try {
+      const item = this.materialsService.createFromUpload(body.category, url);
+      return { status: 'success', data: item };
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
+  }
 }

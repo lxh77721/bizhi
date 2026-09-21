@@ -7,6 +7,10 @@ export default defineAppConfig({
     'pages/ai/index',
     'pages/detail/index',
     'pages/admin/index',
+    'pages/admin-categories/index',
+    'pages/admin-pictures/index',
+    'pages/admin-crawl/index',
+    'pages/admin-config/index',
     'pages/my-likes/index',
     'pages/my-downloads/index',
     'pages/faq/index'
