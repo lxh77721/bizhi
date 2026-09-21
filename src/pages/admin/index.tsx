@@ -82,9 +82,23 @@ function authHeader() {
 }
 
 export default function Admin() {
-  const [token, setToken] = useState(() => Taro.getStorageSync(TOKEN_KEY) || '');
+  const [authState, setAuthState] = useState<'checking' | 'authed' | 'unauthed'>('checking');
   const [pwd, setPwd] = useState('');
   const [loginErr, setLoginErr] = useState('');
+
+  // 进入时向后端校验登录态：即使本地残留 token，也须经后端验证有效；否则清除并回到登录页
+  useEffect(() => {
+    if (!Taro.getStorageSync(TOKEN_KEY)) {
+      setAuthState('unauthed');
+      return;
+    }
+    Network.request({ url: '/api/admin/stats', header: authHeader() })
+      .then(() => setAuthState('authed'))
+      .catch(() => {
+        Taro.removeStorageSync(TOKEN_KEY);
+        setAuthState('unauthed');
+      });
+  }, []);
 
   // 登录
   const doLogin = useCallback(async () => {
@@ -96,14 +110,22 @@ export default function Admin() {
       });
       const data = (res.data as any)?.data;
       Taro.setStorageSync(TOKEN_KEY, data.token);
-      setToken(data.token);
+      setAuthState('authed');
       setLoginErr('');
     } catch (err: any) {
       setLoginErr((err?.data && (err.data as any)?.message) || '登录失败，请检查口令');
     }
   }, [pwd]);
 
-  if (!token) {
+  if (authState === 'checking') {
+    return (
+      <View className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Text className="block text-slate-500">正在校验登录…</Text>
+      </View>
+    );
+  }
+
+  if (authState === 'unauthed') {
     return (
       <View className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <Card className="w-full max-w-sm">
@@ -131,7 +153,14 @@ export default function Admin() {
     );
   }
 
-  return <AdminPanel onLogout={() => setToken('')} />;
+  return (
+    <AdminPanel
+      onLogout={() => {
+        Taro.removeStorageSync(TOKEN_KEY);
+        setAuthState('unauthed');
+      }}
+    />
+  );
 }
 
 function AdminPanel({ onLogout }: { onLogout: () => void }) {

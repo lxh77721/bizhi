@@ -121,6 +121,18 @@ const AboutPage = () => {
         </CardContent>
       </Card>
 
+      {/* 管理后台入口（需管理口令登录，未登录仅见登录页） */}
+      <View className="mt-6 flex justify-center">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-gray-400"
+          onClick={() => Taro.navigateTo({ url: '/pages/admin/index' })}
+        >
+          <Text className="block text-xs text-gray-400">管理后台</Text>
+        </Button>
+      </View>
+
       <Text className="block mt-8 text-center text-xs text-gray-400">
         AI头像壁纸大全 · 让每一张图都治愈你
       </Text>
