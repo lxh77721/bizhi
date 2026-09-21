@@ -42,6 +42,8 @@ export interface MaterialItem {
   tags: string[];
   /** 素材类型：avatar=头像（来自大头像站）、wallpaper=壁纸（来自壁纸站）；缺省视为头像 */
   type?: 'avatar' | 'wallpaper';
+  /** 8 位口令取图码（自动生成、稳定不变，用于“口令取图”快速定位/分享取图） */
+  code?: string;
 }
 
 /** 首页分类（key 对应素材 category，label 为展示名，icon 为可选图标名） */

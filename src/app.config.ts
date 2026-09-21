@@ -40,9 +40,9 @@ export default defineAppConfig({
       },
       {
         pagePath: 'pages/about/index',
-        text: '关于',
-        iconPath: './assets/tabbar/info.png',
-        selectedIconPath: './assets/tabbar/info-active.png'
+        text: '我的',
+        iconPath: './assets/tabbar/circle-user.png',
+        selectedIconPath: './assets/tabbar/circle-user-active.png'
       }
     ]
   }

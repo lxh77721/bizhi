@@ -6,7 +6,7 @@ import Taro, {
   useShareAppMessage,
   useShareTimeline,
 } from '@tarojs/taro';
-import { Download, Lock, CirclePlay, Share2 } from 'lucide-react-taro';
+import { Download, Lock, CirclePlay, Share2, Heart } from 'lucide-react-taro';
 import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,6 +14,7 @@ import { toast } from '@/components/ui/toast';
 import { BANNER_AD_ID, REWARD_AD_ID } from '@/constants/ad';
 import { fetchPublicConfig, getPublicConfig } from '@/services/config';
 import { assetUrl } from '@/utils/asset';
+import { fetchMe, toggleLike as apiToggleLike, markDownload } from '@/services/user';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ import './index.css';
 
 interface MaterialItem {
   id: string;
+  code?: string;
   title: string;
   category: string;
   url: string;
@@ -47,6 +49,8 @@ const DetailPage = () => {
   const [lockOpen, setLockOpen] = useState(false);
   // 是否已解锁（观看激励视频或未接入广告时直接设为 true），解锁后可去水印下载原图
   const [unlocked, setUnlocked] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likeBusy, setLikeBusy] = useState(false);
 
   useLoad(async () => {
     fetchPublicConfig(); // 拉取云端流量主 ID 等配置（后台可动态维护）
@@ -55,6 +59,13 @@ const DetailPage = () => {
     try {
       const res = await Network.request({ url: `/api/materials/${id}` });
       setItem((res.data as any)?.data || null);
+      // 拉取用户喜欢状态（无身份则自动创建）
+      try {
+        const me = await fetchMe();
+        setLiked(me.likes.some((l) => l.id === id));
+      } catch {
+        /* 忽略登录态异常 */
+      }
     } catch (err) {
       console.error('[detail] 加载失败', err);
     } finally {
@@ -113,7 +124,7 @@ const DetailPage = () => {
       // 开发态 / 未接入广告时降级：直接解锁并保存（便于预览）
       setUnlocked(true);
       reportUnlock();
-      if (item) saveToAlbum(assetUrl(item.url));
+      if (item) { saveToAlbum(assetUrl(item.url)); markDownload(item.id).catch(() => {}); }
       return;
     }
     const ad = Taro.createRewardedVideoAd({ adUnitId: rewardId });
@@ -126,7 +137,7 @@ const DetailPage = () => {
         toast.success('已解锁，开始下载');
         setUnlocked(true);
         reportUnlock();
-        if (item) saveToAlbum(assetUrl(item.url));
+        if (item) { saveToAlbum(assetUrl(item.url)); markDownload(item.id).catch(() => {}); }
       } else {
         toast.info('完整观看视频后才能解锁下载哦');
       }
@@ -137,6 +148,29 @@ const DetailPage = () => {
   /** 底部下载按钮点击：弹出激励视频解锁提示（不强制，可取消） */
   const onDownloadClick = () => {
     setLockOpen(true);
+  };
+
+  /** 喜欢 / 取消喜欢 */
+  const onLike = async () => {
+    if (!item || likeBusy) return;
+    setLikeBusy(true);
+    try {
+      const r = await apiToggleLike(item.id);
+      setLiked(r.liked);
+    } catch (err) {
+      toast.error('操作失败，请重试');
+    } finally {
+      setLikeBusy(false);
+    }
+  };
+
+  /** 复制 8 位口令取图码 */
+  const copyCode = () => {
+    if (!item?.code) return;
+    Taro.setClipboardData({
+      data: item.code,
+      success: () => toast.success('口令码已复制'),
+    });
   };
 
   if (loading) {
@@ -180,13 +214,35 @@ const DetailPage = () => {
       </View>
 
       <View className="px-4 py-4">
-        <Text className="block text-lg font-bold text-gray-800">{item.title}</Text>
+        <View className="flex flex-row items-center justify-between">
+          <Text className="block flex-1 pr-2 text-lg font-bold text-gray-800">{item.title}</Text>
+          <Button
+            size="sm"
+            variant={liked ? 'default' : 'ghost'}
+            className="shrink-0 rounded-full"
+            onClick={onLike}
+          >
+            <Heart size={16} color={liked ? '#ffffff' : '#94a3b8'} />
+            <Text className={`block ${liked ? 'text-white' : 'text-slate-400'}`}>{liked ? '已喜欢' : '喜欢'}</Text>
+          </Button>
+        </View>
         <View className="mt-2 flex flex-row flex-wrap gap-2">
           {item.tags?.map((tag) => (
             <View key={tag} className="rounded-full bg-slate-100 px-3 py-1">
               <Text className="block text-xs text-gray-500">{tag}</Text>
             </View>
           ))}
+        </View>
+        <View className="mt-3 flex flex-row items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
+          <Text className="block flex-1 text-xs text-gray-500">
+            口令取图码：
+            <Text className="block text-base font-semibold tracking-widest text-blue-600">{item.code || '--'}</Text>
+          </Text>
+          {item.code ? (
+            <Button size="sm" variant="outline" className="shrink-0 rounded-full" onClick={copyCode}>
+              <Text className="block text-xs text-blue-500">复制</Text>
+            </Button>
+          ) : null}
         </View>
 
         {/* 页面内 Banner 广告位（配置了流量主 ID 才显示，未开通前完全隐藏；ID 可由后台动态下发） */}

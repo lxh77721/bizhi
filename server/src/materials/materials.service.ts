@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { FileStore } from '@/common/file-store.service';
+import { createHash } from 'crypto';
 import { MATERIALS, CATEGORIES, MaterialItem, Category } from '@/materials/materials.data';
 
 export interface QueryMaterialDto {
@@ -9,7 +10,7 @@ export interface QueryMaterialDto {
   type?: 'avatar' | 'wallpaper';
 }
 
-interface MaterialsFile {
+export interface MaterialsFile {
   categories: Category[];
   materials: MaterialItem[];
 }
@@ -36,6 +37,7 @@ export class MaterialsService implements OnModuleInit {
 
   private current(): MaterialsFile {
     if (!this.cache) this.reload();
+    this.ensureCodes();
     return this.cache;
   }
 
@@ -68,6 +70,40 @@ export class MaterialsService implements OnModuleInit {
   /** 按 id 查找单个素材 */
   findById(id: string): MaterialItem | undefined {
     return this.current().materials.find((item) => item.id === id);
+  }
+
+  /** 按 8 位口令取图码查找素材 */
+  findByCode(code: string): MaterialItem | undefined {
+    this.ensureCodes();
+    return this.cache.materials.find((item) => item.code === code);
+  }
+
+  /** 确保每条素材都有稳定的 8 位口令码（由 id 派生、幂等；首次为历史素材补齐并落盘） */
+  private ensureCodes() {
+    const { materials } = this.cache;
+    const used = new Set<string>();
+    let changed = false;
+    for (const m of materials) {
+      if (m.code && !used.has(m.code)) {
+        used.add(m.code);
+        continue;
+      }
+      // 无 code 或 code 冲突 → 重新生成
+      let c = this.genCode(m.id);
+      let guard = 0;
+      while (used.has(c) && guard++ < 30) c = this.genCode(c);
+      m.code = c;
+      used.add(c);
+      changed = true;
+    }
+    if (changed) this.store.write('materials.json', this.cache);
+  }
+
+  /** 由种子串生成 8 位口令码（base36，字母数字） */
+  private genCode(seed: string): string {
+    const hex = createHash('md5').update(seed).digest('hex');
+    const num = BigInt('0x' + hex.slice(0, 11)); // 44 bit
+    return num.toString(36).padStart(8, '0').slice(-8)
   }
 
   /* -------------------- 管理端读写（admin 模块调用） -------------------- */
