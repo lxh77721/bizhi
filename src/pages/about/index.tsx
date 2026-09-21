@@ -135,7 +135,7 @@ export default function Mine() {
       <Text className="block mt-10 text-center text-xs text-gray-300 underline" onClick={() => go('/pages/admin/index')}>
         管理后台
       </Text>
-      <Text className="block mt-2 text-center text-xs text-gray-400">AI头像壁纸大全 · 让每一张图都治愈你</Text>
+      <Text className="block mt-2 text-center text-xs text-gray-400">头像壁纸大全 · 让每一张图都治愈你</Text>
 
       {/* 口令取图弹窗 */}
       <Dialog open={codeOpen} onOpenChange={setCodeOpen}>

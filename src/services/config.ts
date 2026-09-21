@@ -18,7 +18,7 @@ export interface PublicConfig {
 
 let cached: PublicConfig | null = null;
 
-/** 拉取云端配置并缓存到内存（首页/AI页/详情页启动时调用） */
+/** 拉取云端配置并缓存到内存（首页/详情页启动时调用） */
 export async function fetchPublicConfig(): Promise<PublicConfig | null> {
   try {
     const res = await Network.request({ url: '/api/config' });

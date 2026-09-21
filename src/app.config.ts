@@ -14,7 +14,7 @@ export default defineAppConfig({
   window: {
     backgroundTextStyle: 'light',
     navigationBarBackgroundColor: '#ffffff',
-    navigationBarTitleText: 'AI头像壁纸大全',
+    navigationBarTitleText: '头像壁纸大全',
     navigationBarTextStyle: 'black'
   },
   tabBar: {

@@ -47,7 +47,7 @@ const IndexPage = () => {
 
   // 首页分享：社交裂变引流（标题埋关键词）——通过右上角菜单转发
   useShareAppMessage(() => ({
-    title: 'AI头像壁纸大全 - 超多免费头像、情侣头像、治愈壁纸',
+    title: '头像壁纸大全 - 超多免费头像、情侣头像、治愈壁纸',
     path: '/pages/index/index',
   }));
 

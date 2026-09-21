@@ -52,11 +52,11 @@ const AiPage = () => {
   const [unlocked, setUnlocked] = useState(false);
 
   useShareAppMessage(() => ({
-    title: '用「AI头像壁纸大全」一键生成原创头像与治愈壁纸，快来试试',
+    title: '用「头像壁纸大全」一键生成原创头像与治愈壁纸，快来试试',
     path: '/pages/ai/index',
   }));
 
-  // 挂载时拉取云端配置（流量主 ID、AI 模型等，后台可动态维护）
+  // 挂载时拉取云端配置（流量主 ID、 模型等，后台可动态维护）
   useEffect(() => {
     fetchPublicConfig();
   }, []);
@@ -146,9 +146,9 @@ const AiPage = () => {
   return (
     <View className="min-h-screen bg-white px-4 pt-6">
       {/* 标题 */}
-      <Text className="block text-xl font-bold text-gray-800">AI 一键生成专属头像壁纸</Text>
+      <Text className="block text-xl font-bold text-gray-800"> 一键生成专属头像壁纸</Text>
       <Text className="block mt-1 text-sm text-gray-500">
-        输入描述关键词，AI 为你生成原创插画 / 风景 / 抽象 / 文字氛围素材
+        输入描述关键词， 为你生成原创插画 / 风景 / 抽象 / 文字氛围素材
       </Text>
 
       {/* 输入框 */}
@@ -191,7 +191,7 @@ const AiPage = () => {
       {/* 版权合规提示 */}
       <View className="mt-4 rounded-xl bg-blue-50 px-4 py-3">
         <Text className="block text-xs text-blue-500">
-          ※ 素材由 AI 原创生成，仅支持插画 / 风景 / 抽象 / 文字氛围素材；不支持明星、动漫IP
+          ※ 素材由  原创生成，仅支持插画 / 风景 / 抽象 / 文字氛围素材；不支持明星、动漫IP
           、真人肖像等，规避版权与肖像风险。
         </Text>
       </View>

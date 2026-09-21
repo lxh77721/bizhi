@@ -130,7 +130,7 @@ export default function Admin() {
       <View className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <Card className="w-full max-w-sm">
           <CardContent className="p-6">
-            <Text className="block text-lg font-semibold text-center mb-1">AI头像壁纸 · 管理后台</Text>
+            <Text className="block text-lg font-semibold text-center mb-1">头像壁纸 · 管理后台</Text>
             <Text className="block text-sm text-slate-500 text-center mb-5">请输入管理口令登录</Text>
             <View className="mb-4">
               <Input
@@ -390,7 +390,7 @@ function StatsTab() {
   const cards = [
     { label: '素材总数', value: stats?.materialCount ?? '-', color: 'text-blue-500' },
     { label: '分类数', value: stats?.categoryCount ?? '-', color: 'text-emerald-500' },
-    { label: 'AI 生成次数', value: stats?.generateCount ?? '-', color: 'text-violet-500' },
+    { label: ' 生成次数', value: stats?.generateCount ?? '-', color: 'text-violet-500' },
     { label: '解锁下载次数', value: stats?.unlockCount ?? '-', color: 'text-amber-500' },
   ];
 
@@ -411,8 +411,8 @@ function StatsTab() {
         <CardContent className="p-4">
           <Text className="block text-sm font-medium mb-1">说明</Text>
           <Text className="block text-xs text-slate-500 leading-relaxed">
-            素材与分类的管理请切换到「素材」「分类」标签；流量主广告位 ID、AI 模型等在「配置」标签维护。
-            统计次数包含 AI 生成与激励视频解锁下载两个维度。
+            素材与分类的管理请切换到「素材」「分类」标签；流量主广告位 ID、 模型等在「配置」标签维护。
+            统计次数包含  生成与激励视频解锁下载两个维度。
           </Text>
         </CardContent>
       </Card>
@@ -683,15 +683,15 @@ function ConfigTab() {
     { key: 'adminPassword', label: '管理口令', hint: '管理后台登录口令（请修改）', password: true },
     { key: 'bannerAdId', label: 'Banner 广告位 ID', hint: '流量主 banner；留空则不展示' },
     { key: 'rewardAdId', label: '激励视频广告位 ID', hint: '解锁下载激励视频；留空则解锁降级为直接下载' },
-    { key: 'aiModel', label: 'AI 生图模型', hint: '如 doubao-seedream-4-5-251128' },
-    { key: 'aiModelEndpoint', label: 'AI 生图模型地址', hint: 'modelBaseUrl；留空用平台默认（扣子/豆包）' },
+    { key: 'aiModel', label: ' 生图模型', hint: '如 doubao-seedream-4-5-251128' },
+    { key: 'aiModelEndpoint', label: ' 生图模型地址', hint: 'modelBaseUrl；留空用平台默认（扣子/豆包）' },
     { key: 'aiSize', label: '生图尺寸', hint: 'SDK 仅支持 2K / 4K' },
   ];
   const ossFields: { key: keyof PubConfig; label: string; hint: string; password?: boolean }[] = [
     { key: 'ossEndpoint', label: 'OSS Endpoint（区域接入点）', hint: '不含桶名！华北 https://oss-cn-beijing.aliyuncs.com；华东 https://oss-cn-shanghai.aliyuncs.com' },
     { key: 'ossBucket', label: 'OSS 存储空间 (Bucket)', hint: '阿里云 Bucket 名称，如 img389（勿写进 Endpoint）' },
     { key: 'ossRegion', label: 'OSS 区域', hint: '须与 Endpoint 一致：cn-beijing 华北 / cn-shanghai 华东 / cn-hangzhou 华东' },
-    { key: 'ossAccessKey', label: 'AccessKey ID', hint: '阿里云 RAM 密钥 AK（形如 LTAI…，仅管理端可见）', password: true },
+    { key: 'ossAccessKey', label: 'AccessKey ID', hint: '阿里云 RAM 密钥 AK（形如 LT…，仅管理端可见）', password: true },
     { key: 'ossSecretKey', label: 'AccessKey Secret', hint: '阿里云 RAM 密钥 SK（务必完整复制；仅管理端可见）', password: true },
     { key: 'ossPublicUrl', label: 'Bucket 公网访问域名', hint: '对象存储控制台该 Bucket 的外网访问域名，如 img389.oss-cn-beijing.aliyuncs.com，可不带 https://；配好即可永久访问图片' },
   ];

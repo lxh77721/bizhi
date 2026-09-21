@@ -75,14 +75,14 @@ const DetailPage = () => {
 
   // 分享到微信群：文案自动带上小程序名称，路径带素材 id 便于回流
   useShareAppMessage(() => ({
-    title: `${item?.title || '超好用头像壁纸'} - 来自「AI头像壁纸大全」，头像/壁纸/治愈壁纸免费逛`,
+    title: `${item?.title || '超好用头像壁纸'} - 来自「头像壁纸大全」，头像/壁纸/治愈壁纸免费逛`,
     path: `/pages/detail/index?id=${item?.id}`,
     imageUrl: item?.thumbUrl,
   }));
 
   // 分享到朋友圈
   useShareTimeline(() => ({
-    title: `${item?.title || 'AI头像壁纸大全'}，超多原创头像与治愈壁纸`,
+    title: `${item?.title || '头像壁纸大全'}，超多原创头像与治愈壁纸`,
   }));
 
   /** 保存图片到系统相册（含相册授权引导） */
