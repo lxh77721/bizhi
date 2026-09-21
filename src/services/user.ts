@@ -98,3 +98,24 @@ export async function fetchByCode(code: string): Promise<{ material: MaterialIte
   });
   return unwrap(res) as { material: MaterialItem };
 }
+
+/** 获取本地身份；未登录返回空串（不自动创建） */
+export function getClientIdIfAny(): string {
+  return (Taro.getStorageSync(CLIENT_KEY) as string) || '';
+}
+
+/** 我的喜欢列表（未登录返回空） */
+export async function fetchLikes(): Promise<MaterialItem[]> {
+  const cid = getClientIdIfAny();
+  if (!cid) return [];
+  const res = await Network.request({ url: '/api/user/likes', data: { clientId: cid } });
+  return (unwrap(res)?.likes) || [];
+}
+
+/** 我的下载列表（未登录返回空） */
+export async function fetchDownloads(): Promise<MaterialItem[]> {
+  const cid = getClientIdIfAny();
+  if (!cid) return [];
+  const res = await Network.request({ url: '/api/user/downloads', data: { clientId: cid } });
+  return (unwrap(res)?.downloads) || [];
+}
