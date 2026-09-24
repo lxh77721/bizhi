@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { FileStore } from '@/common/file-store.service';
 import { MaterialsService } from '@/materials/materials.service';
 import { MaterialItem } from '@/materials/materials.data';
@@ -12,13 +12,18 @@ const USERS_FILE = 'users.json';
  * - 数据持久化到 server/data/users.json
  */
 @Injectable()
-export class UserService {
+export class UserService implements OnModuleInit {
   private cache: UsersFile;
 
   constructor(
     private readonly store: FileStore,
     private readonly materials: MaterialsService,
   ) {
+    // 缓存延迟到 onModuleInit 初始化，确保 FileStore 已从数据库加载持久化数据
+    this.cache = { users: {} };
+  }
+
+  onModuleInit() {
     this.cache = this.store.read<UsersFile>(USERS_FILE, { users: {} });
   }
 
