@@ -165,20 +165,22 @@ export default function SourceList({
         )}
       </View>
 
-      {/* 底部常驻 Banner 广告位 */}
-      <View
-        style={{
-          position: 'fixed',
-          bottom: 50,
-          left: 0,
-          right: 0,
-          backgroundColor: '#ffffff',
-          padding: '8px 12px',
-          zIndex: 10,
-        }}
-      >
-        {isWeapp && BANNER_AD_ID ? <Ad unitId={BANNER_AD_ID} adIntervals={30} /> : null}
-      </View>
+      {/* 底部常驻 Banner 广告位（仅微信小程序且配置了广告 ID 时展示，避免在其它端/未开通时留下白条） */}
+      {isWeapp && BANNER_AD_ID ? (
+        <View
+          style={{
+            position: 'fixed',
+            bottom: 50,
+            left: 0,
+            right: 0,
+            backgroundColor: '#ffffff',
+            padding: '8px 12px',
+            zIndex: 10,
+          }}
+        >
+          <Ad unitId={BANNER_AD_ID} adIntervals={30} />
+        </View>
+      ) : null}
     </View>
   );
 }
