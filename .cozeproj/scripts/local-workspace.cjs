@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { createHash } = require('node:crypto');
-const { spawn, execFileSync } = require('node:child_process');
+const { spawn, execFileSync, spawnSync } = require('node:child_process');
 const { setTimeout: delay } = require('node:timers/promises');
 
 const scriptRoot = fs.realpathSync(path.resolve(__dirname, '..', '..'));
@@ -83,6 +83,53 @@ function run(command, args, cwd, env = process.env) {
   });
 }
 
+// Pure-Node fallback used when `rsync` is unavailable in the deploy/build image
+// (avoids needing `apt-get install rsync`, which can fail in the platform build env).
+let _rsync = null;
+function hasRsync() {
+  if (_rsync !== null) return _rsync;
+  try { _rsync = spawnSync('rsync', ['--version'], { stdio: 'ignore' }).status === 0; }
+  catch { _rsync = false; }
+  if (process.env.COZE_TARO_RSYNC_FALLBACK === '1') _rsync = false;
+  return _rsync;
+}
+function exclMatch(rel, rule) {
+  rel = rel.replace(/\\/g, '/');
+  if (rule.startsWith('/')) {
+    const p = rule.slice(1).replace(/\\/g, '/');
+    return rel === p || rel.startsWith(`${p}/`);
+  }
+  if (rule.includes('*')) {
+    const base = rel.split('/').pop();
+    const re = new RegExp('^' + rule.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
+    return re.test(base) || re.test(rel);
+  }
+  return rel === rule || rel.split('/').includes(rule);
+}
+function copyTree(src, dst) {
+  fs.mkdirSync(dst, { recursive: true });
+  for (const ent of fs.readdirSync(src, { withFileTypes: true })) {
+    const rel = ent.name;
+    if (exclusions.some(r => exclMatch(rel, r))) continue;
+    const sAbs = path.join(src, rel);
+    const dAbs = path.join(dst, rel);
+    const isDir = ent.isDirectory() || (ent.isSymbolicLink() && fs.statSync(sAbs).isDirectory());
+    if (isDir) { copyTree(sAbs, dAbs); continue; }
+    const real = fs.realpathSync(sAbs);
+    fs.mkdirSync(path.dirname(dAbs), { recursive: true });
+    fs.copyFileSync(real, dAbs);
+  }
+  for (const ent of fs.readdirSync(dst, { withFileTypes: true })) {
+    if (exclusions.some(r => exclMatch(ent.name, r))) continue;
+    if (!fs.existsSync(path.join(src, ent.name))) fs.rmSync(path.join(dst, ent.name), { recursive: true, force: true });
+  }
+}
+function syncDir(src, dst, args, cwd) {
+  if (hasRsync()) return run('rsync', args, cwd);
+  copyTree(src, dst);
+  return Promise.resolve();
+}
+
 function ensureCache() {
   for (const dir of [cacheRoot, projectCache]) {
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -136,7 +183,7 @@ async function sync(local) {
   // Checksums catch same-size edits with unchanged/epoch Drive mtimes. Do not use -t:
   // changed local files get fresh mtimes and unchanged files retain watcher snapshots.
   // Materialize source links so the framework never follows them back onto Drive.
-  await run('rsync', [
+  await syncDir(source, local, [
     '-rLp', '--checksum', '--delete', '--delay-updates',
     ...exclusions.map(entry => `--exclude=${entry}`), `${source}/`, `${local}/`,
   ], source);
@@ -265,7 +312,7 @@ async function syncOutputBack(local, outputs = outputDirs) {
     if (!fs.existsSync(localOutput)) continue;
     fs.rmSync(sourceOutput, { recursive: true, force: true });
     fs.mkdirSync(path.dirname(sourceOutput), { recursive: true });
-    await run('rsync', ['-a', '--delete', `${localOutput}/`, `${sourceOutput}/`], local);
+    await syncDir(localOutput, sourceOutput, ['-a', '--delete', `${localOutput}/`, `${sourceOutput}/`], local);
   }
 }
 

@@ -25,7 +25,6 @@ run_win = [
   "-File",
   ".cozeproj/scripts/dev_run.ps1"
 ]
-deps = [ "git", "rsync" ]
 pack = [ "bash", ".cozeproj/scripts/pack.sh" ]
 pack_win = [
   "powershell.exe",
@@ -48,4 +47,3 @@ validate_win = [
 [deploy]
 build = [ "bash", ".cozeproj/scripts/deploy_build.sh" ]
 run = [ "bash", ".cozeproj/scripts/deploy_run.sh" ]
-deps = [ "git", "rsync" ]
