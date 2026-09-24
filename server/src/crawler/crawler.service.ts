@@ -1,7 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import * as cheerio from 'cheerio';
-import * as fs from 'fs';
-import * as path from 'path';
 import { MaterialsService } from '@/materials/materials.service';
 import { OssService } from '@/common/oss.service';
 import { MaterialItem, Category } from '@/materials/materials.data';
@@ -60,15 +58,13 @@ export class CrawlerService {
     return Buffer.from(await res.arrayBuffer());
   }
 
-  /** 把抓取的图片 buffer 存到 OSS（已配置）；未配置时回退本地 /static */
+  /** 把抓取的图片 buffer 存到 OSS。
+   *  注意：FaaS 部署文件系统只读，不支持本地落盘，因此必须配置对象存储。 */
   private async storeBuffer(buf: Buffer, source: string, folder: string, fileName: string, contentType: string): Promise<string> {
-    if (this.oss.isConfigured()) {
-      return this.oss.upload(buf, `${source}/${folder}/${fileName}`, contentType);
+    if (!this.oss.isConfigured()) {
+      throw new Error('未配置对象存储（OSS），无法保存抓取图片；请到后台「配置」页填写并保存对象存储信息');
     }
-    const dir = path.resolve(process.cwd(), 'public', 'materials', source, folder);
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, fileName), buf);
-    return `/static/materials/${source}/${folder}/${fileName}`;
+    return this.oss.upload(buf, `${source}/${folder}/${fileName}`, contentType);
   }
 
   /** 追加素材（按 id 去重，写入内存并落盘） */

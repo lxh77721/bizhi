@@ -16,8 +16,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
-import * as fs from 'fs';
-import * as path from 'path';
 import { randomBytes } from 'crypto';
 import { AdminService } from '@/admin/admin.service';
 import { AdminGuard } from '@/admin/admin.guard';
@@ -223,8 +221,8 @@ export class AdminController {
   }
 
   /** POST /api/admin/upload  multipart: file=图片
-   *  - 若后台已配置七牛云 OSS：上传到 OSS 并返回可访问 URL
-   *  - 否则回退本地物理存储 server/public/materials */
+   *  上传到已配置的对象存储（OSS）并返回可访问 URL。
+   *  FaaS 部署文件系统只读，不支持本地落盘，因此必须配置 OSS。 */
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
   async upload(@UploadedFile() file: any) {
@@ -233,21 +231,15 @@ export class AdminController {
     const ext = /^[a-zA-Z0-9]{2,5}$/.test(originalExt) ? originalExt : 'jpg';
     const filename = `m-${Date.now()}-${randomBytes(4).toString('hex')}.${ext}`;
 
-    if (this.oss.isConfigured()) {
-      // 上传到七牛云对象存储
-      const url = await this.oss.upload(
-        file.buffer,
-        `materials/${filename}`,
-        file.mimetype || 'image/jpeg',
-      );
-      return { status: 'success', data: { url } };
+    if (!this.oss.isConfigured()) {
+      throw new BadRequestException('未配置对象存储（OSS），无法上传；请到后台「配置」页填写并保存对象存储信息');
     }
-
-    // 未配置 OSS 时：保存到本地物理存储（server/public/materials，经 /static 访问）
-    const dir = path.resolve(process.cwd(), 'public', 'materials');
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, filename), file.buffer);
-    return { status: 'success', data: { url: `/static/materials/${filename}` } };
+    const url = await this.oss.upload(
+      file.buffer,
+      `materials/${filename}`,
+      file.mimetype || 'image/jpeg',
+    );
+    return { status: 'success', data: { url } };
   }
 
   /* ---------------- 傻瓜式：分类（只需名字） ---------------- */
@@ -288,20 +280,15 @@ export class AdminController {
     @Body() body: { category?: string },
   ) {
     if (!file || !file.buffer) throw new BadRequestException('请选择图片');
-    if (!body.category) throw new BadRequestException('请选择分类');
+        if (!body.category) throw new BadRequestException('请选择分类');
     const originalExt = (file.originalname || 'jpg').split('.').pop() || 'jpg';
     const ext = /^[a-zA-Z0-9]{2,5}$/.test(originalExt) ? originalExt : 'jpg';
     const filename = `m-${Date.now()}-${randomBytes(4).toString('hex')}.${ext}`;
 
-    let url: string;
-    if (this.oss.isConfigured()) {
-      url = await this.oss.upload(file.buffer, `materials/${filename}`, file.mimetype || 'image/jpeg');
-    } else {
-      const dir = path.resolve(process.cwd(), 'public', 'materials');
-      fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(path.join(dir, filename), file.buffer);
-      url = `/static/materials/${filename}`;
+    if (!this.oss.isConfigured()) {
+      throw new BadRequestException('未配置对象存储（OSS），无法上传；请到后台「配置」页填写并保存对象存储信息');
     }
+    const url = await this.oss.upload(file.buffer, `materials/${filename}`, file.mimetype || 'image/jpeg');
 
     try {
       const item = this.materialsService.createFromUpload(body.category, url);
