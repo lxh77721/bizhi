@@ -52,3 +52,6 @@ node-compile-cache/
 
 # Runtime data (database-backed; contains secrets) — never commit
 server/data/
+
+# WorkBuddy local workspace state (memory / tool data)
+.workbuddy/
