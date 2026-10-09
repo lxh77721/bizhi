@@ -49,3 +49,6 @@ pnpm-debug.log*
 node-compile-cache/
 /logs
 .codegraph/
+
+# Runtime data (database-backed; contains secrets) — never commit
+server/data/
