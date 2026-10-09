@@ -24,6 +24,7 @@ import { ConfigService, AppConfig } from '@/config/config.service';
 import { StatsService } from '@/stats/stats.service';
 import { OssService } from '@/common/oss.service';
 import { CrawlerService } from '@/crawler/crawler.service';
+import { SOURCES as CRAWL_SOURCES } from '@/crawler/sources';
 import { MaterialItem, Category } from '@/materials/materials.data';
 
 /** 登录 / 注销（无需守卫） */
@@ -192,13 +193,17 @@ export class AdminController {
 
   /* ------------------------- 图片上传（对象存储 / 物理存储） ------------------------- */
 
-  /** POST /api/admin/crawl  手动触发素材抓取（定时任务默认每天凌晨 4 点自动执行）
-   *  body: { categories?: string[], maxPages?: number, maxImagesPerCategory?: number } */
+  /** POST /api/admin/crawl  启动素材抓取（**立即返回**，任务在服务端后台执行）
+   *  body: { source?: 'avatar'|'wallpaper', sources?: string[], categories?: string[],
+   *          maxPages?: number, maxImagesPerCategory?: number, dateFrom?: string, dateTo?: string }
+   *  sources 为抓取源 id 列表：dt=堆糖、nb=彼岸图网、bi=必应图搜；不传则使用全部启用的源
+   *  抓取耗时通常分钟级，请用 GET /api/admin/crawl/status 轮询进度与结果 */
   @Post('crawl')
   async crawl(
     @Body()
     body: {
       source?: 'avatar' | 'wallpaper';
+      sources?: string[];
       categories?: string[];
       maxPages?: number;
       maxImagesPerCategory?: number;
@@ -209,8 +214,9 @@ export class AdminController {
     if (this.crawler.isRunning()) {
       throw new BadRequestException('抓取任务正在进行中，请稍后查看结果');
     }
-    const result = await this.crawler.run({
+    const result = this.crawler.start({
       source: body.source,
+      sources: body.sources,
       categories: body.categories,
       maxPages: body.maxPages,
       maxImagesPerCategory: body.maxImagesPerCategory,
@@ -218,6 +224,28 @@ export class AdminController {
       dateTo: body.dateTo,
     });
     return { status: 'success', data: result };
+  }
+
+  /** GET /api/admin/crawl/status  查询抓取任务进度与结果（后台轮询） */
+  @Get('crawl/status')
+  crawlStatus(): Record<string, unknown> {
+    return { status: 'success', data: this.crawler.getTaskState() };
+  }
+
+  /** GET /api/admin/crawl/sources  可用的抓取源与各自支持的分类（供后台渲染选项） */
+  @Get('crawl/sources')
+  crawlSources() {
+    return {
+      status: 'success',
+      data: {
+        sources: CRAWL_SOURCES.map((s) => ({
+          id: s.id,
+          name: s.name,
+          defaultEnabled: s.defaultEnabled !== false,
+          categories: s.categories.map((c) => ({ key: c.key, label: c.label, type: c.type })),
+        })),
+      },
+    };
   }
 
   /** POST /api/admin/upload  multipart: file=图片

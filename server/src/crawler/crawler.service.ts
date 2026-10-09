@@ -1,39 +1,99 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import * as cheerio from 'cheerio';
 import { MaterialsService } from '@/materials/materials.service';
 import { OssService } from '@/common/oss.service';
 import { MaterialItem, Category } from '@/materials/materials.data';
-
-const UA =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36';
+import {
+  SOURCES,
+  CrawlSource,
+  CrawledImage,
+  mergeSourceCategories,
+  readImageMeta,
+  composeTitle,
+  isUnsafeText,
+} from './sources';
+import { sleep, USER_AGENT } from './sources/http';
 
 export interface CrawlOptions {
+  /** 频道过滤：avatar=只抓头像、wallpaper=只抓壁纸；不传则两者都抓 */
   source?: 'avatar' | 'wallpaper';
+  /** 指定抓取源 id（dt=堆糖 / nb=彼岸图网 / bi=必应图搜）；不传则用全部启用的源 */
+  sources?: string[];
+  /** 指定分类 key（可写全名 avatar_xxx，也可只写 avatar_ 之后的部分）；不传则抓该源匹配到的全部分类 */
   categories?: string[];
+  /** 每个分类最多翻多少页（默认 5） */
   maxPages?: number;
+  /** 每个分类最多入库多少张（默认 60；已存在的数量计入额度） */
   maxImagesPerCategory?: number;
+  /** 只抓该日期之后的图（YYYY-MM-DD）；仅对能拿到发布时间的源生效 */
   dateFrom?: string;
+  /** 只抓该日期之前的图（YYYY-MM-DD） */
   dateTo?: string;
 }
 
-/** 头像源可手动选择的分类（不选则同步站点全部分类） */
-const DEFAULT_AVATAR_CATES: Array<{ path: string; label: string }> = [
-  { path: 'weixintouxiang', label: '微信头像' },
-  { path: 'nanshengtouxiang', label: '男生头像' },
-  { path: 'nvshengtouxiang', label: '女生头像' },
-  { path: 'douyintouxiang', label: '抖音头像' },
-];
-/** 头像源站点同步时需要排除的敏感分类关键词 */
-const AVATAR_SKIP_LABEL = /动漫|卡通|明星|二次元|ceshi|测试/;
+interface Stat {
+  created: number;
+  skipped: number;
+  errors: number;
+}
+
+/** 一次抓取任务的汇总结果 */
+export interface CrawlResult {
+  created: number;
+  skipped: number;
+  errors: number;
+  /** 兼容旧后台字段名（= errors） */
+  failed: number;
+  newCategories: number;
+  detail: string;
+}
+
+/** 抓取任务状态（供后台轮询；抓取耗时通常在分钟级，必须异步执行） */
+export interface CrawlTaskState {
+  running: boolean;
+  startedAt: number | null;
+  finishedAt: number | null;
+  /** 当前进度描述，如「堆糖 · 女生头像 · 已新增 12」 */
+  progress: string;
+  result: CrawlResult | null;
+  error: string | null;
+}
+
+/** 一次请求向源站要多少条 */
+const PAGE_BATCH = 40;
+
+/** 头像：要求接近方形（避免把长图/表情包混进头像频道） */
+const AVATAR_RATIO = { min: 0.7, max: 1.43 };
+/** 壁纸：要求竖屏（手机壁纸），横屏图在小程序里会被裁切变形 */
+const WALLPAPER_MIN_RATIO = 1.05;
+
+/** 单张图体积上限，避免把超大原图灌进对象存储 */
+const MAX_BYTES = 12 * 1024 * 1024;
+/** 低于此体积视为占位图/防盗链返回的假图 */
+const MIN_BYTES = 6 * 1024;
 
 /**
- * 素材爬虫：从头像站+壁纸站抓取，分类与站点同步，图片上传到七牛 OSS。
- * 头像源：www.33990.net（HTML 解析，图片带日期可过滤）
- * 壁纸源：bz.sfbsh.cn（JSON API）
+ * 素材抓取服务（多源编排）
+ * --------------------------------------------------------------------------
+ * 只做编排，不关心站点结构 —— 站点差异全部封装在 crawler/sources/*.source.ts：
+ *   分类并集落库 → 逐源逐分类翻页 → 去重 → 下载 → 读真实尺寸/格式 → 上传对象存储 → 落库
+ *
+ * 当前启用的源（见 sources/index.ts）：
+ *   dt  堆糖       头像+壁纸主源，JSON 接口，量大、无防盗链
+ *   nb  彼岸图网   4K 竖屏手机壁纸，列表页 alt 自带真实中文标题（需 Referer）
+ *   bi  必应图搜   全网覆盖补充源（第三方直链，失败率略高）
  */
 @Injectable()
 export class CrawlerService {
   private running = false;
+  /** 最近一次（或正在进行的）抓取任务状态 */
+  private task: CrawlTaskState = {
+    running: false,
+    startedAt: null,
+    finishedAt: null,
+    progress: '',
+    result: null,
+    error: null,
+  };
 
   constructor(
     private readonly materials: MaterialsService,
@@ -44,213 +104,371 @@ export class CrawlerService {
     return this.running;
   }
 
+  /** 查询任务状态（含进度与结果）；后台轮询用 */
+  getTaskState(): CrawlTaskState {
+    return { ...this.task, running: this.running };
+  }
+
   /* ------------------------------ 通用工具 ------------------------------ */
 
-  private async fetchText(url: string): Promise<string> {
-    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
-    return res.text();
+  private async fetchBuffer(url: string, extraHeaders: Record<string, string> = {}): Promise<Buffer> {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': USER_AGENT, ...extraHeaders },
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > MAX_BYTES) throw new Error(`图片过大 ${(buf.length / 1048576).toFixed(1)}MB`);
+    if (buf.length < MIN_BYTES) throw new Error(`图片过小 ${buf.length}B，疑似防盗链占位图`);
+    return buf;
   }
 
-  private async fetchBuffer(url: string): Promise<Buffer> {
-    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(30000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
-    return Buffer.from(await res.arrayBuffer());
-  }
-
-  /** 把抓取的图片 buffer 存到 OSS。
-   *  注意：FaaS 部署文件系统只读，不支持本地落盘，因此必须配置对象存储。 */
-  private async storeBuffer(buf: Buffer, source: string, folder: string, fileName: string, contentType: string): Promise<string> {
+  /** 写入对象存储。FaaS 部署文件系统只读，因此必须配置对象存储。 */
+  private async storeBuffer(
+    buf: Buffer,
+    source: string,
+    folder: string,
+    fileName: string,
+    contentType: string,
+  ): Promise<string> {
     if (!this.oss.isConfigured()) {
       throw new Error('未配置对象存储（OSS），无法保存抓取图片；请到后台「配置」页填写并保存对象存储信息');
     }
     return this.oss.upload(buf, `${source}/${folder}/${fileName}`, contentType);
   }
 
-  /** 追加素材（按 id 去重，写入内存并落盘） */
-  private upsertMaterial(data: { categories: Category[]; materials: MaterialItem[] }, item: MaterialItem): boolean {
-    if (data.materials.some((m) => m.id === item.id)) return false;
-    data.materials.unshift(item);
-    return true;
-  }
-
-  /** 同步某来源的分类：替换该 type 下全部本地分类为站点最新分类 */
-  private syncCategories(
-    data: { categories: Category[]; materials: MaterialItem[] },
-    type: 'avatar' | 'wallpaper',
-    cats: Array<{ key: string; label: string; icon?: string }>,
-  ) {
-    data.categories = data.categories.filter((c) => c.type !== type);
-    for (const c of cats) {
-      if (!data.categories.some((x) => x.key === c.key)) data.categories.push({ ...c, type });
+  /** 分类并集落库：只增不删（仍被源声明 或 还挂着素材的分类会保留） */
+  private syncCategories(data: { categories: Category[]; materials: MaterialItem[] }, declared: Category[]): Category[] {
+    const keys = new Set(declared.map((c) => c.key));
+    data.categories = data.categories.filter(
+      (c) => keys.has(c.key) || data.materials.some((m) => m.category === c.key),
+    );
+    for (const c of declared) {
+      const exist = data.categories.find((x) => x.key === c.key);
+      if (exist) {
+        exist.label = c.label;
+        exist.type = c.type;
+      } else {
+        data.categories.push({ ...c });
+      }
     }
     this.materials.saveData(data);
-    return data.categories.filter((c) => c.type === type);
+    return data.categories;
   }
 
-  /* ------------------------------ 头像源 ------------------------------ */
-
-  /** 同步头像站分类导航（首页解析，过滤敏感分类） */
-  private async fetchAvatarCategories(): Promise<Array<{ key: string; label: string }>> {
-    try {
-      const html = await this.fetchText('http://www.33990.net/');
-      const $ = cheerio.load(html);
-      const cats: Array<{ key: string; label: string }> = [];
-      $('a').each((_, el) => {
-        const href = $(el).attr('href') || '';
-        const label = $(el).text().trim();
-        const m = href.match(/^\/([a-z0-9_-]+)\/?$/i) || href.match(/^\/([a-z0-9_-]+)$/i);
-        if (m && label && label.length <= 8 && !AVATAR_SKIP_LABEL.test(label)) {
-          const key = `avatar_${m[1]}`;
-          if (!cats.some((c) => c.key === key)) cats.push({ key, label });
-        }
-      });
-      return cats.length ? cats : DEFAULT_AVATAR_CATES.map((c) => ({ key: `avatar_${c.path}`, label: c.label }));
-    } catch (e) {
-      console.warn('[crawler] 头像分类同步失败，使用默认分类', e?.message);
-      return DEFAULT_AVATAR_CATES.map((c) => ({ key: `avatar_${c.path}`, label: c.label }));
-    }
-  }
-
-  private inDateRange(filename: string, from?: string, to?: string): boolean {
+  /** 日期过滤：优先用源站发布时间，缺失时不拦截（交由分类额度控制） */
+  private inDateRange(ts: number | undefined, from?: string, to?: string): boolean {
     if (!from && !to) return true;
-    const m = filename.match(/([0-9]{4})([0-9]{2})([0-9]{2})/);
-    const first = filename.match(/([0-9]{8})/);
-    if (!first) return true; // 无日期信息不拦截
-    const day = first[1];
-    const ts = new Date(`${day.slice(0, 4)}-${day.slice(4, 6)}-${day.slice(6, 8)}`).getTime();
-    if (isNaN(ts)) return true;
-    if (from) { const f = new Date(from).setHours(0,0,0,0); if (ts < f) return false; }
-    if (to) { const t = new Date(to).setHours(23,59,59,999); if (ts > t) return false; }
+    if (!ts) return true;
+    if (from) {
+      const f = new Date(`${from}T00:00:00+08:00`).getTime();
+      if (!isNaN(f) && ts < f) return false;
+    }
+    if (to) {
+      const t = new Date(`${to}T23:59:59+08:00`).getTime();
+      if (!isNaN(t) && ts > t) return false;
+    }
     return true;
   }
 
-  private async runAvatar(opts: CrawlOptions): Promise<{ created: number; skipped: number; errors: number; newCategories: number; detail?: string }> {
-    const data = this.materials.getData();
-    const siteCats = await this.fetchAvatarCategories();
-    const synced = this.syncCategories(data, 'avatar', siteCats.map((c) => ({ ...c })));
-
-    const selected = opts.categories && opts.categories.length
-      ? synced.filter((c) => opts.categories!.includes(c.key) || opts.categories!.includes(c.key.replace('avatar_', '')))
-      : synced;
-    const maxPages = opts.maxPages || 3;
-    const max = opts.maxImagesPerCategory || 40;
-
-    let created = 0, skipped = 0, errors = 0;
-    for (const cat of selected) {
-      const pathSlug = cat.key.replace('avatar_', '');
-      let got = data.materials.filter((m) => m.category === cat.key).length;
-      if (got >= max) continue;
-      try {
-        for (let page = 1; page <= maxPages && got < max; page++) {
-          const listUrl = page === 1 ? `http://www.33990.net/${pathSlug}` : `http://www.33990.net/${pathSlug}/${page}`;
-          const html = await this.fetchText(listUrl);
-          const $ = cheerio.load(html);
-          const imgUrls = new Set<string>();
-          $('img').each((_, el) => {
-            const src = $(el).attr('src') || $(el).attr('data-src') || '';
-            if (src.includes('5km.net') && /^https?:/i.test(src)) imgUrls.add(src);
-          });
-          for (const imgUrl of Array.from(imgUrls)) {
-            if (got >= max) break;
-            const fileName = imgUrl.split('/').pop() || '';
-            const ext = (fileName.split('.').pop() || 'jpg').match(/^[a-zA-Z0-9]{2,5}$/) ? fileName.split('.').pop() : 'jpg';
-            if (!this.inDateRange(fileName, opts.dateFrom, opts.dateTo)) { skipped++; continue; }
-            const id = `cz_${fileName.replace(/\.[a-z0-9]+$/i, '')}`;
-            if (data.materials.some((m) => m.id === id)) { skipped++; continue; }
-            try {
-              const buf = await this.fetchBuffer(imgUrl);
-              const url = await this.storeBuffer(buf, 'avatar', pathSlug, `${fileName}_${Date.now()}.${ext}`, `image/${ext === 'png' ? 'png' : 'jpeg'}`);
-              this.upsertMaterial(data, {
-                id, title: cat.label, category: cat.key,
-                url, thumbUrl: url, width: 1024, height: 1024,
-                tags: [cat.label, '头像'], type: 'avatar',
-              });
-              created++; got++;
-              await new Promise((r) => setTimeout(r, 300));
-            } catch (e) { errors++; console.warn('[crawler] 头像下载失败', imgUrl, e?.message); }
-          }
-        }
-      } catch (e) {
-        console.warn(`[crawler] 头像分类 ${cat.key} 抓取失败`, e?.message);
-      }
-    }
-    this.materials.saveData(data);
-    return { created, skipped, errors, newCategories: synced.length, detail: `头像源：新增 ${created} 张，跳过 ${skipped}，失败 ${errors}` };
+  /** 按频道校验宽高比：头像要方形、壁纸要竖屏 */
+  private ratioOk(type: 'avatar' | 'wallpaper', w: number, h: number): boolean {
+    if (!w || !h) return false;
+    const r = h / w;
+    if (type === 'avatar') return r >= AVATAR_RATIO.min && r <= AVATAR_RATIO.max;
+    return r >= WALLPAPER_MIN_RATIO;
   }
 
-  /* ------------------------------ 壁纸源 ------------------------------ */
-
-  private async runWallpaper(opts: CrawlOptions): Promise<{ created: number; skipped: number; errors: number; newCategories: number; detail?: string }> {
-    const data = this.materials.getData();
-    const base = 'https://bz.sfbsh.cn';
-    // 同步壁纸站分类（tags）
-    let siteTags: string[] = [];
-    try {
-      const parsed = JSON.parse(await this.fetchText(`${base}/api/get_tags.php`));
-      siteTags = Array.isArray(parsed) ? parsed : (parsed?.data || []);
-    } catch (e) {
-      console.warn('[crawler] 壁纸站分类同步失败', e?.message);
-      siteTags = ['简约', '艺术', '风景', '文字'];
-    }
-    const cats = siteTags.filter((t) => t && !AVATAR_SKIP_LABEL.test(t)).map((t) => ({ key: `wallpaper_${t}`, label: t }));
-    const synced = this.syncCategories(data, 'wallpaper', cats);
-
-    const selected = opts.categories && opts.categories.length
-      ? synced.filter((c) => opts.categories!.includes(c.key) || opts.categories!.includes(c.key.replace('wallpaper_', '')))
-      : synced;
-    const maxPages = opts.maxPages || 8;
-    const max = opts.maxImagesPerCategory || 40;
-
-    let created = 0, skipped = 0, errors = 0;
-    for (const cat of selected) {
-      const tag = cat.key.replace('wallpaper_', '');
-      let got = data.materials.filter((m) => m.category === cat.key).length;
-      if (got >= max) continue;
-      try {
-        for (let page = 1; page <= maxPages && got < max; page++) {
-          const api = `${base}/api/wallpapers.php?page=${page}&limit=100${tag ? `&tag=${encodeURIComponent(tag)}` : ''}`;
-          const json = JSON.parse(await this.fetchText(api));
-          const items = json?.data || [];
-          if (!items.length) break;
-          for (const it of items) {
-            if (got >= max) break;
-            const id = `wp_${it.id}`;
-            if (data.materials.some((m) => m.id === id)) { skipped++; continue; }
-            try {
-              const fileName = it.filename || String(it.id);
-              const large = `${base}/wallpapers/large/${fileName}`;
-              const buf = await this.fetchBuffer(large);
-              const url = await this.storeBuffer(buf, 'wallpaper', tag, `${it.id}.webp`, 'image/webp');
-              this.upsertMaterial(data, {
-                id, title: it.title || cat.label, category: cat.key,
-                url, thumbUrl: url, width: 1080, height: 1920,
-                tags: [cat.label, '壁纸', ...(it.tags || [])].slice(0, 6), type: 'wallpaper',
-              });
-              created++; got++;
-              await new Promise((r) => setTimeout(r, 200));
-            } catch (e) { errors++; console.warn('[crawler] 壁纸下载失败', it.id, e?.message); }
-          }
-        }
-      } catch (e) {
-        console.warn(`[crawler] 壁纸分类 ${cat.key} 抓取失败`, e?.message);
+  private resolveSources(ids?: string[]): CrawlSource[] {
+    if (ids && ids.length) {
+      const picked = SOURCES.filter((s) => ids.includes(s.id));
+      if (!picked.length) {
+        throw new BadRequestException(`未找到指定抓取源（可选：${SOURCES.map((s) => `${s.id}=${s.name}`).join('、')}）`);
       }
+      return picked;
     }
-    this.materials.saveData(data);
-    return { created, skipped, errors, newCategories: synced.length, detail: `壁纸源：新增 ${created} 张，跳过 ${skipped}，失败 ${errors}` };
+    // 不指定时只跑「默认启用」的源，避免把低质量源混进日常抓取
+    return SOURCES.filter((s) => s.defaultEnabled !== false);
   }
 
-  /* ------------------------------ 对外入口 ------------------------------ */
+  /* ------------------------------ 主流程 ------------------------------ */
 
-  async run(opts: CrawlOptions = {}) {
+  /**
+   * 启动抓取任务并**立即返回**。
+   * ---------------------------------------------------------------------------
+   * 抓取是分钟级任务（多源 × 多分类 × 逐张下载上传），而小程序 wx.request
+   * 默认 60s 超时、FaaS 网关同样有超时，同步等待必然以「request:fail timeout」
+   * 收场（用户以为失败、服务端其实还在跑）。因此改为后台执行 + 轮询查状态：
+   *   POST /api/admin/crawl          → 立即返回 { started: true }
+   *   GET  /api/admin/crawl/status   → 轮询进度与结果
+   */
+  start(opts: CrawlOptions = {}): { started: boolean } {
+    if (this.running) throw new BadRequestException('已有抓取任务进行中');
+    this.running = true;
+    this.task = {
+      running: true,
+      startedAt: Date.now(),
+      finishedAt: null,
+      progress: '准备中…',
+      result: null,
+      error: null,
+    };
+
+    // 不 await：任务在后台跑，结果写入 this.task 供轮询读取
+    void this.execute(opts)
+      .then((r) => {
+        this.task.result = r;
+        this.task.progress = '已完成';
+      })
+      .catch((e: any) => {
+        this.task.error = e?.message || String(e);
+        this.task.progress = '抓取失败';
+        console.error('[crawler] 任务失败', e);
+      })
+      .finally(() => {
+        this.running = false;
+        this.task.running = false;
+        this.task.finishedAt = Date.now();
+      });
+
+    return { started: true };
+  }
+
+  /** 同步执行（供定时任务/测试使用；HTTP 接口请用 start） */
+  async run(opts: CrawlOptions = {}): Promise<CrawlResult> {
     if (this.running) throw new BadRequestException('已有抓取任务进行中');
     this.running = true;
     try {
-      const source = opts.source === 'wallpaper' ? 'wallpaper' : 'avatar';
-      const res = source === 'wallpaper' ? await this.runWallpaper(opts) : await this.runAvatar(opts);
-      return res;
+      return await this.execute(opts);
     } finally {
       this.running = false;
     }
+  }
+
+  private async execute(opts: CrawlOptions): Promise<CrawlResult> {
+    const data = this.materials.getData();
+    const enabled = this.resolveSources(opts.sources);
+    if (!enabled.length) {
+      throw new BadRequestException(`没有可用的抓取源（可选：${SOURCES.map((s) => `${s.id}=${s.name}`).join('、')}）`);
+    }
+
+    // 1) 分类并集（只增不删）
+    const synced = this.syncCategories(data, mergeSourceCategories());
+    const stripPrefix = (k: string) => k.replace(/^(avatar|wallpaper)_/, '');
+    const selected = synced.filter((c) => {
+      if (opts.source && c.type !== opts.source) return false;
+      if (!opts.categories?.length) return true;
+      return opts.categories.includes(c.key) || opts.categories.includes(stripPrefix(c.key));
+    });
+
+    // 2) 抓取上下文：按分类实时计数 + 跨源 URL 去重 + 分分类标题去重
+    const maxPages = Math.max(1, opts.maxPages || 5);
+    const max = Math.max(1, opts.maxImagesPerCategory || 60);
+    const perCategory = new Map<string, number>();
+    for (const c of synced) {
+      perCategory.set(c.key, data.materials.filter((m) => m.category === c.key).length);
+    }
+    const knownIds = new Set(data.materials.map((m) => m.id));
+    const knownUrls = new Set(data.materials.map((m) => m.url));
+    const titlesByCategory = new Map<string, Set<string>>();
+    for (const c of synced) {
+      titlesByCategory.set(c.key, new Set(data.materials.filter((m) => m.category === c.key).map((m) => m.title)));
+    }
+
+    const total: Stat = { created: 0, skipped: 0, errors: 0 };
+    const details: string[] = [];
+
+    // 3) 逐源抓取
+    for (const src of enabled) {
+      const targets = selected
+        .map((c) => ({ cat: c, sc: src.categories.find((x) => x.key === c.key) }))
+        .filter((x): x is { cat: (typeof selected)[number]; sc: NonNullable<typeof x.sc> } => !!x.sc);
+      if (!targets.length) {
+        details.push(`${src.name}：本次无匹配分类`);
+        continue;
+      }
+
+      const stat: Stat = { created: 0, skipped: 0, errors: 0 };
+
+      for (const { cat, sc } of targets) {
+        let got = perCategory.get(cat.key) ?? 0;
+        if (got >= max) {
+          stat.skipped++;
+          continue;
+        }
+        this.task.progress = `${src.name} · ${cat.label} · 已新增 ${total.created}`;
+
+        for (let page = 1; page <= maxPages; page++) {
+          if (got >= max) break;
+          let batch: CrawledImage[] = [];
+          try {
+            batch = await src.fetchPage({ keyword: sc.keyword, page, limit: PAGE_BATCH });
+          } catch (e: any) {
+            // 单页失败重试一次，仍失败则放弃该分类（继续下一个分类，不影响其它源）
+            try {
+              await sleep(1500);
+              batch = await src.fetchPage({ keyword: sc.keyword, page, limit: PAGE_BATCH });
+            } catch (e2: any) {
+              stat.errors++;
+              console.warn(`[crawler] ${src.name} 第 ${page} 页抓取失败`, e2?.message);
+              break;
+            }
+          }
+          if (!batch.length) break;
+
+          for (const item of batch) {
+            if (got >= max) break;
+
+            const id = `${src.id}_${item.sid}`;
+            if (knownIds.has(id) || knownUrls.has(item.url)) {
+              stat.skipped++;
+              continue;
+            }
+            if (!this.inDateRange(item.publishedAt, opts.dateFrom, opts.dateTo)) {
+              stat.skipped++;
+              continue;
+            }
+
+            // 归类：源可覆盖默认分类（如彼岸图网的混装列表）
+            const categoryKey = src.resolveCategory?.(item, cat.key) || cat.key;
+            const category = synced.find((c) => c.key === categoryKey) || cat;
+            // 目标分类自身也有额度上限（重定向后 cat.key 与 category.key 可能不同，
+            // 必须按最终落库的分类单独判额度，否则会把某个分类灌爆）
+            const targetCount = perCategory.get(categoryKey) ?? 0;
+            if (targetCount >= max) {
+              stat.skipped++;
+              continue;
+            }
+
+            let buf: Buffer;
+            try {
+              buf = await this.fetchBuffer(item.url, src.imageHeaders?.(item.url));
+            } catch (e: any) {
+              stat.errors++;
+              console.warn(`[crawler] ${src.name} 下载失败 ${item.url}`, e?.message);
+              continue;
+            }
+
+            // 以图片字节为准：真实尺寸 + 真实格式
+            const meta = readImageMeta(buf);
+            // 只收静态图：动图（GIF）在瀑布流卡片里不显示首帧、体积也大，混进来是噪音
+            if (!meta || meta.mime === 'image/gif') {
+              stat.skipped++;
+              continue;
+            }
+            const width = meta.width || item.width || 0;
+            const height = meta.height || item.height || 0;
+            if (!this.ratioOk(category.type || 'avatar', width, height)) {
+              stat.skipped++;
+              continue;
+            }
+
+            const type = (category.type || 'avatar') as 'avatar' | 'wallpaper';
+            const title = this.pickTitle({
+              item,
+              label: category.label,
+              type,
+              keyword: sc.keyword,
+              used: titlesByCategory.get(category.key) || new Set<string>(),
+            });
+            if (!title || isUnsafeText(title)) {
+              stat.skipped++;
+              continue;
+            }
+
+            const ext = meta.ext;
+            const mime = meta.mime;
+            let storedUrl: string;
+            try {
+              storedUrl = await this.storeBuffer(
+                buf,
+                src.id,
+                categoryKey.replace(/^[a-z]+_/i, '') || 'misc',
+                `${item.sid}.${ext}`,
+                mime,
+              );
+            } catch (e: any) {
+              stat.errors++;
+              console.warn(`[crawler] ${src.name} 上传失败 ${item.sid}`, e?.message);
+              continue;
+            }
+
+            data.materials.unshift({
+              id,
+              title,
+              category: category.key,
+              url: storedUrl,
+              thumbUrl: storedUrl,
+              width,
+              height,
+              tags: [category.label, type === 'avatar' ? '头像' : '壁纸', ...(item.tags || [])].slice(0, 6),
+              type,
+            });
+            knownIds.add(id);
+            knownUrls.add(item.url);
+            titlesByCategory.get(categoryKey)?.add(title);
+            perCategory.set(categoryKey, targetCount + 1);
+            got++;
+            stat.created++;
+            total.created++;
+            this.task.progress = `${src.name} · ${category.label} · 已新增 ${total.created}`;
+
+            await sleep(120); // 控制对源站与对象存储的压力
+          }
+
+          await sleep(320); // 页间间隔
+        }
+      }
+
+      details.push(`${src.name}(新增 ${stat.created} / 跳过 ${stat.skipped} / 失败 ${stat.errors})`);
+      total.skipped += stat.skipped;
+      total.errors += stat.errors;
+    }
+
+    this.materials.saveData(data);
+
+    return {
+      created: total.created,
+      skipped: total.skipped,
+      errors: total.errors,
+      // 兼容旧后台字段名
+      failed: total.errors,
+      newCategories: synced.length,
+      detail: details.join('；') || '无可用源',
+    };
+  }
+
+  /**
+   * 生成标题：优先源站真标题，其次标签组合，最后形容词池。
+   * 同分类内撞车时换一个形容词重试，最多 4 次，仍撞则加序号兜底。
+   */
+  private pickTitle(args: {
+    item: CrawledImage;
+    label: string;
+    type: 'avatar' | 'wallpaper';
+    keyword: string;
+    used: Set<string>;
+  }): string {
+    const { item, label, type, keyword, used } = args;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const t = composeTitle({
+        rawTitle: item.title,
+        tags: item.tags,
+        label,
+        type,
+        sid: item.sid,
+        keyword,
+        attempt,
+      });
+      if (t && !used.has(t)) return t;
+    }
+    const base = composeTitle({ rawTitle: item.title, tags: item.tags, label, type, sid: item.sid, keyword });
+    let n = 2;
+    let candidate = `${base}${n}`;
+    while (used.has(candidate) && n < 99) {
+      n++;
+      candidate = `${base}${n}`;
+    }
+    return candidate;
   }
 }
