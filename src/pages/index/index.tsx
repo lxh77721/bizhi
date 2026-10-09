@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { View, Text, Image, ScrollView, Ad } from '@tarojs/components';
-import Taro, { useShareAppMessage } from '@tarojs/taro';
+import { View, Text, Image, ScrollView, Ad, Navigator } from '@tarojs/components';
+import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro';
 import { Search, CircleAlert } from 'lucide-react-taro';
 import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
@@ -46,9 +46,19 @@ const IndexPage = () => {
   const [loading, setLoading] = useState(true);
 
   // 首页分享：社交裂变引流（标题埋关键词）——通过右上角菜单转发
+  // imageUrl 用当前列表首图，比默认截屏点击率更高
+  const shareImage = list[0]?.thumbUrl ? assetUrl(list[0].thumbUrl) : undefined;
+
   useShareAppMessage(() => ({
-    title: '头像壁纸大全 - 超多免费头像、情侣头像、治愈壁纸',
+    title: '头像壁纸大全 - 超多免费头像、情侣头像、治愈壁纸，一键保存',
     path: '/pages/index/index',
+    imageUrl: shareImage,
+  }));
+
+  // 分享到朋友圈（壁纸类内容在朋友圈传播意愿高，是免费曝光入口）
+  useShareTimeline(() => ({
+    title: '头像壁纸大全 - 超多免费头像、情侣头像、治愈壁纸',
+    imageUrl: shareImage,
   }));
 
   /** 拉取素材列表（支持分类 + 关键词） */
@@ -88,20 +98,20 @@ const IndexPage = () => {
     fetchMaterials(activeCategory, keyword);
   };
 
-  /** 进入详情预览页 */
-  const goDetail = (item: MaterialItem) => {
-    Taro.navigateTo({ url: `/pages/detail/index?id=${item.id}` });
-  };
-
   // 瀑布流：按奇偶索引分成左右两列，形成错落布局
   const leftCol = list.filter((_, i) => i % 2 === 0);
   const rightCol = list.filter((_, i) => i % 2 === 1);
 
+  /**
+   * 卡片用 <Navigator> 组件而非 Taro.navigateTo：
+   * 微信搜一搜的爬虫只能沿 <navigator> 链接遍历页面、无法执行 JS，
+   * 用组件跳转才能让详情页被爬虫发现并收录（H5 端会渲染为 <a>，同样可被收录）。
+   */
   const renderCard = (item: MaterialItem) => (
-    <View
+    <Navigator
       key={item.id}
-      className="mb-3 overflow-hidden rounded-2xl bg-white shadow-sm"
-      onClick={() => goDetail(item)}
+      url={`/pages/detail/index?id=${item.id}`}
+      className="mb-3 block overflow-hidden rounded-2xl bg-white shadow-sm"
       hoverClass="opacity-90"
     >
       <Image
@@ -110,7 +120,7 @@ const IndexPage = () => {
         src={assetUrl(item.thumbUrl)}
         lazyLoad
       />
-    </View>
+    </Navigator>
   );
 
   const renderSkeleton = () =>
@@ -122,7 +132,7 @@ const IndexPage = () => {
     ));
 
   return (
-    <View className="min-h-screen bg-white">
+    <View className={`min-h-screen bg-white ${isWeapp && BANNER_AD_ID ? 'pb-32' : ''}`}>
       {/* 顶部：搜索框 */}
       <View className="px-4 pt-4">
         <View className="flex flex-row items-center gap-2 rounded-full bg-slate-50 px-4 py-2">
@@ -176,6 +186,26 @@ const IndexPage = () => {
           </View>
         )}
       </View>
+
+      {/* 热门专题：每个分类对应一个独立可收录 URL，既是用户的下钻入口，
+          也是爬虫从首页发现专题页、进而发现详情页的内链 */}
+      {categories.length > 0 ? (
+        <View className="px-4 pt-1 pb-4">
+          <Text className="block text-sm font-semibold text-gray-800">热门专题</Text>
+          <View className="mt-2 flex flex-row flex-wrap gap-2">
+            {categories.map((cat) => (
+              <Navigator
+                key={cat.key}
+                url={`/pages/topic/index?category=${encodeURIComponent(cat.key)}`}
+                className="rounded-full bg-blue-50 px-3 py-2"
+                hoverClass="opacity-90"
+              >
+                <Text className="block text-xs text-blue-500">{cat.label}专题</Text>
+              </Navigator>
+            ))}
+          </View>
+        </View>
+      ) : null}
 
       {/* 底部常驻 Banner 广告位（仅微信小程序且配置了广告 ID 时展示，避免在其它端/未开通时留下白条） */}
       {isWeapp && BANNER_AD_ID ? (

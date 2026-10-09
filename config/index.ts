@@ -20,6 +20,47 @@ const resolvePort = (value: string | undefined, fallback: number): number => {
 const h5Port = resolvePort(process.env.PORT, 5000);
 const serverPort = resolvePort(process.env.SERVER_PORT, 3000);
 
+/**
+ * 微信小程序页面收录规则（sitemap.json）
+ * --------------------------------------------------------------------------
+ * 作用：声明哪些页面允许被「微信搜一搜」的爬虫索引。
+ *
+ * 为什么必须显式声明：本项目所有页面跳转都走 Taro.navigateTo（JS 跳转），
+ * 而微信爬虫只能沿着 <navigator> 组件遍历页面，无法执行 JS。
+ * 因此若不声明收录范围，除首页外的页面（尤其是详情页）几乎不会被索引。
+ *
+ * 注意：sitemap 的 page 字段「不支持通配符」（官方文档明确 * 仅表示所有页面），
+ * 所以不允许收录的页面必须逐条列出。
+ */
+const WEAPP_SITEMAP = {
+  desc: '微信搜一搜页面收录规则：内容页全部开放索引，仅排除管理后台与个人中心页面。',
+  rules: [
+    // 管理后台：不含用户可搜索的内容，且暴露后台入口有安全风险
+    { action: 'disallow', page: 'pages/admin/index' },
+    { action: 'disallow', page: 'pages/admin-categories/index' },
+    { action: 'disallow', page: 'pages/admin-pictures/index' },
+    { action: 'disallow', page: 'pages/admin-crawl/index' },
+    { action: 'disallow', page: 'pages/admin-config/index' },
+    // 个人中心类页面：内容随用户变化，爬虫抓到的是空页，收录反而拉低质量度
+    { action: 'disallow', page: 'pages/my-likes/index' },
+    { action: 'disallow', page: 'pages/my-downloads/index' },
+    // 兜底规则：其余页面（首页 / 头像 / 壁纸 / 详情 / AI / FAQ 等）全部允许索引
+    { action: 'allow', page: '*' },
+  ],
+};
+
+/** 把 sitemap.json 写入小程序产物根目录（与 app.json 同级，微信才能读到） */
+const generateWeappSitemap = (outputRoot: string) => {
+  const outputDir = path.resolve(__dirname, '..', outputRoot);
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+  fs.writeFileSync(
+    path.resolve(outputDir, 'sitemap.json'),
+    JSON.stringify(WEAPP_SITEMAP, null, 2),
+  );
+};
+
 const generateTTProjectConfig = (outputRoot: string) => {
   const config = {
     miniprogramRoot: './',
@@ -162,6 +203,16 @@ export default defineConfig<'vite'>(async (merge, _env) => {
                 name: 'generate-tt-project-config',
                 closeBundle() {
                   generateTTProjectConfig(outputRoot);
+                },
+              },
+            ]
+          : []),
+        ...(process.env.TARO_ENV === 'weapp'
+          ? [
+              {
+                name: 'generate-weapp-sitemap',
+                closeBundle() {
+                  generateWeappSitemap(outputRoot);
                 },
               },
             ]

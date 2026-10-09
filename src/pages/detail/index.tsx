@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Image, Ad, Button as NativeBtn } from '@tarojs/components'; // eslint-disable-line no-restricted-syntax
+import { View, Text, Image, Ad, Button as NativeBtn, Navigator } from '@tarojs/components'; // eslint-disable-line no-restricted-syntax
 import Taro, {
   useLoad,
   useRouter,
@@ -51,6 +51,23 @@ const DetailPage = () => {
   const [unlocked, setUnlocked] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
+  /** 同分类相关推荐：延长停留时长与访问深度，直接影响搜一搜排名权重与广告曝光 */
+  const [related, setRelated] = useState<MaterialItem[]>([]);
+
+  /** 拉取同分类素材作为相关推荐（排除当前这张） */
+  const loadRelated = async (current: MaterialItem) => {
+    try {
+      const res = await Network.request({
+        url: '/api/materials',
+        method: 'GET',
+        data: { category: current.category },
+      });
+      const list: MaterialItem[] = (res.data as any)?.data?.list || [];
+      setRelated(list.filter((m) => m.id !== current.id).slice(0, 9));
+    } catch (err) {
+      console.error('[detail] 相关推荐加载失败', err);
+    }
+  };
 
   useLoad(async () => {
     fetchPublicConfig(); // 拉取云端流量主 ID 等配置（后台可动态维护）
@@ -58,7 +75,13 @@ const DetailPage = () => {
     if (!id) return;
     try {
       const res = await Network.request({ url: `/api/materials/${id}` });
-      setItem((res.data as any)?.data || null);
+      const data = (res.data as any)?.data || null;
+      setItem(data);
+      if (data) {
+        // 每个素材页设置独立标题，让搜一搜能按「素材名 + 高清原图下载」这类长尾词命中
+        Taro.setNavigationBarTitle({ title: `${data.title} - 高清原图免费下载` });
+        loadRelated(data);
+      }
       // 拉取用户喜欢状态（无身份则自动创建）
       try {
         const me = await fetchMe();
@@ -213,7 +236,7 @@ const DetailPage = () => {
         )}
       </View>
 
-      <View className="px-4 py-4">
+      <View className="px-4 py-4 pb-40">
         <View className="flex flex-row items-center justify-between">
           <Text className="block flex-1 pr-2 text-lg font-bold text-gray-800">{item.title}</Text>
           <Button
@@ -249,6 +272,26 @@ const DetailPage = () => {
         {isWeapp && (getPublicConfig()?.bannerAdId || BANNER_AD_ID) ? (
           <View className="mt-5 overflow-hidden rounded-xl">
             <Ad unitId={getPublicConfig()?.bannerAdId || BANNER_AD_ID} adIntervals={30} />
+          </View>
+        ) : null}
+
+        {/* 相关推荐：同分类更多素材。既延长浏览深度、降低跳出，也让爬虫沿链接发现更多详情页 */}
+        {related.length > 0 ? (
+          <View className="mt-6">
+            <Text className="block text-sm font-semibold text-gray-800">相关推荐</Text>
+            <View className="mt-3 flex flex-row flex-wrap gap-2">
+              {related.map((m) => (
+                <Navigator
+                  key={m.id}
+                  url={`/pages/detail/index?id=${m.id}`}
+                  className="block overflow-hidden rounded-xl bg-slate-50 shadow-sm"
+                  style={{ width: '32%' }}
+                  hoverClass="opacity-90"
+                >
+                  <Image className="w-full" mode="widthFix" src={assetUrl(m.thumbUrl)} lazyLoad />
+                </Navigator>
+              ))}
+            </View>
           </View>
         ) : null}
       </View>

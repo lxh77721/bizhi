@@ -6,6 +6,7 @@ export default defineAppConfig({
     'pages/about/index',
     'pages/ai/index',
     'pages/detail/index',
+    'pages/topic/index',
     'pages/admin/index',
     'pages/admin-categories/index',
     'pages/admin-pictures/index',
@@ -21,6 +22,9 @@ export default defineAppConfig({
     navigationBarTitleText: '头像壁纸大全',
     navigationBarTextStyle: 'black'
   },
+  // 页面收录配置：指向 sitemap.json，声明哪些页面允许被「微信搜一搜」索引
+  // （该文件由 config/index.ts 的 generate-weapp-sitemap 插件在构建时写入产物根目录）
+  sitemapLocation: 'sitemap.json',
   tabBar: {
     color: '#9ca3af',
     selectedColor: '#4c9df5',
