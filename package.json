@@ -8,7 +8,7 @@
     "build:pack": "pnpm exec concurrently --kill-others-on-fail --kill-signal SIGKILL -n weapp,tt -c yellow,cyan \"pnpm build:weapp\" \"pnpm build:tt\"",
     "build:server": "pnpm --filter server build",
     "build:tt": "node .cozeproj/scripts/taro-build.cjs build tt",
-    "build:weapp": "node .cozeproj/scripts/taro-build.cjs build weapp",
+    "build:weapp": "node .cozeproj/scripts/taro-build.cjs build weapp && node scripts/ensure-weapp-sitemap.cjs",
     "build:web": "node .cozeproj/scripts/taro-build.cjs build web",
     "dev": "pnpm exec concurrently --kill-others --kill-signal SIGKILL -n web,server -c blue,green \"pnpm dev:web\" \"pnpm dev:server\"",
     "dev:server": "pnpm --filter server dev",

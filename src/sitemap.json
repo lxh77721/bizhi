@@ -1,0 +1,19 @@
+{
+  "desc": "微信搜一搜页面收录规则：内容页全部开放索引并区分优先级，仅排除管理后台与个人中心页面。",
+  "rules": [
+    { "action": "disallow", "page": "pages/admin/index", "priority": 1 },
+    { "action": "disallow", "page": "pages/admin-categories/index", "priority": 1 },
+    { "action": "disallow", "page": "pages/admin-pictures/index", "priority": 1 },
+    { "action": "disallow", "page": "pages/admin-crawl/index", "priority": 1 },
+    { "action": "disallow", "page": "pages/admin-config/index", "priority": 1 },
+    { "action": "disallow", "page": "pages/my-likes/index", "priority": 1 },
+    { "action": "disallow", "page": "pages/my-downloads/index", "priority": 1 },
+    { "action": "allow", "page": "pages/index/index", "priority": 0.9 },
+    { "action": "allow", "page": "pages/detail/index", "params": ["id"], "matching": "inclusive", "priority": 0.8 },
+    { "action": "allow", "page": "pages/avatar/index", "priority": 0.7 },
+    { "action": "allow", "page": "pages/wallpaper/index", "priority": 0.7 },
+    { "action": "allow", "page": "pages/topic/index", "params": ["category"], "matching": "inclusive", "priority": 0.6 },
+    { "action": "allow", "page": "pages/faq/index", "priority": 0.5 },
+    { "action": "allow", "page": "*" }
+  ]
+}

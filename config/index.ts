@@ -38,55 +38,28 @@ const serverPort = resolvePort(process.env.SERVER_PORT, 3000);
  *
  * 爬虫标识：user-agent 为 mpcrawler、场景值 1129；会在请求头带
  * X-WXApp-Crawler-Timestamp / -Nonce / -Signature 三个字段，可用于在接口侧识别爬虫。
+ *
+ * ==== 规则文件在哪、怎么进产物（2026-10-09 修复上传失败后定型，勿改回）====
+ * 规则唯一来源：仓库里的 **src/sitemap.json**（改收录规则改那个文件，不要改本文件）。
+ *
+ * ⚠️ 踩坑记录（曾导致线上部署失败）：
+ *   1. Taro 构建**不会**把 sitemap.json 放进产物目录（`@tarojs/vite-runner` 源码里完全没有
+ *      sitemap 相关逻辑），必须在下面 `copy.patterns` 里显式声明拷贝。只写
+ *      `app.config.ts` 的 `sitemapLocation` 是没用的。
+ *   2. miniprogram-ci 的上传侧（common/code-analyse）逻辑是：
+ *        `appJson.sitemapLocation ? addDep(sitemapLocation, miniprogramRoot)
+ *                                 : fileHelper.existFile('sitemap.json') && addDep('sitemap.json')`
+ *      也就是说 —— 只要声明了 `sitemapLocation`，它就**无条件**把该路径当依赖文件打包上传
+ *      （不像未声明时那样先做存在性检查）。产物里没有这个文件时，上传的就是一份空内容，
+ *      服务端直接返回：
+ *        `-80055 Invalid SiteMap, sitemap错误，非法Json格式`
+ *      整个小程序上传随之失败，且错误信息完全指不到「文件缺失」这个真实原因。
+ *   3. 曾经用自写的 vite 插件在 `closeBundle` 里写文件，实际并未产出（上传依旧报错），
+ *      所以现在改为「copy 官方机制 + 收尾脚本兜底」双保险：
+ *        - 本文件 `copy.patterns`：构建时把 src/sitemap.json 拷到 <产物根>/sitemap.json
+ *        - `scripts/ensure-weapp-sitemap.cjs`：build:weapp 退出后校验/补写（确定性最高）
+ *      改动这两处中任意一处前，请先确认另一处仍在生效。
  */
-const WEAPP_SITEMAP = {
-  desc: '微信搜一搜页面收录规则：内容页全部开放索引并区分优先级，仅排除管理后台与个人中心页面。',
-  rules: [
-    // ---- 1) 先屏蔽：管理后台不含用户可搜索的内容，且暴露后台入口有安全风险 ----
-    { action: 'disallow', page: 'pages/admin/index', priority: 1.0 },
-    { action: 'disallow', page: 'pages/admin-categories/index', priority: 1.0 },
-    { action: 'disallow', page: 'pages/admin-pictures/index', priority: 1.0 },
-    { action: 'disallow', page: 'pages/admin-crawl/index', priority: 1.0 },
-    { action: 'disallow', page: 'pages/admin-config/index', priority: 1.0 },
-    // ---- 2) 个人中心类页面：内容随用户变化，爬虫抓到的是空页，收录反而拉低质量度 ----
-    { action: 'disallow', page: 'pages/my-likes/index', priority: 1.0 },
-    { action: 'disallow', page: 'pages/my-downloads/index', priority: 1.0 },
-    // ---- 3) 核心内容页：显式声明 + 提权，引导爬虫把抓取配额优先分给这些页面 ----
-    { action: 'allow', page: 'pages/index/index', priority: 0.9 },
-    {
-      action: 'allow',
-      page: 'pages/detail/index',
-      params: ['id'],
-      matching: 'inclusive',
-      priority: 0.8,
-    },
-    { action: 'allow', page: 'pages/avatar/index', priority: 0.7 },
-    { action: 'allow', page: 'pages/wallpaper/index', priority: 0.7 },
-    {
-      action: 'allow',
-      page: 'pages/topic/index',
-      params: ['category'],
-      matching: 'inclusive',
-      priority: 0.6,
-    },
-    { action: 'allow', page: 'pages/faq/index', priority: 0.5 },
-    // ---- 4) 兜底规则：其余页面（如「我的」）仍允许被索引 ----
-    // 官方默认行为就是「未显式 disallow 的一律允许」，这里显式写出以免日后误伤
-    { action: 'allow', page: '*' },
-  ],
-};
-
-/** 把 sitemap.json 写入小程序产物根目录（与 app.json 同级，微信才能读到） */
-const generateWeappSitemap = (outputRoot: string) => {
-  const outputDir = path.resolve(__dirname, '..', outputRoot);
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
-  fs.writeFileSync(
-    path.resolve(outputDir, 'sitemap.json'),
-    JSON.stringify(WEAPP_SITEMAP, null, 2),
-  );
-};
 
 const generateTTProjectConfig = (outputRoot: string) => {
   const config = {
@@ -173,8 +146,15 @@ export default defineConfig<'vite'>(async (merge, _env) => {
       ),
       TARO_ENV: JSON.stringify(process.env.TARO_ENV),
     },
+    // 微信小程序收录规则：Taro 不会自动把 sitemap.json 放进产物目录，必须显式声明拷贝。
+    // 规则唯一来源 = src/sitemap.json；`to` 以 outputRoot 开头是 Taro 的约定
+    // （其内部按 `^${outputRoot}/` 前缀裁剪后再交给 vite-plugin-static-copy）。
+    // 兜底见 scripts/ensure-weapp-sitemap.cjs。
     copy: {
-      patterns: [],
+      patterns:
+        process.env.TARO_ENV === 'weapp'
+          ? [{ from: 'src/sitemap.json', to: `${outputRoot}/sitemap.json` }]
+          : [],
       options: {},
     },
     ...(process.env.TARO_ENV === 'tt' && {
@@ -230,16 +210,6 @@ export default defineConfig<'vite'>(async (merge, _env) => {
                 name: 'generate-tt-project-config',
                 closeBundle() {
                   generateTTProjectConfig(outputRoot);
-                },
-              },
-            ]
-          : []),
-        ...(process.env.TARO_ENV === 'weapp'
-          ? [
-              {
-                name: 'generate-weapp-sitemap',
-                closeBundle() {
-                  generateWeappSitemap(outputRoot);
                 },
               },
             ]
