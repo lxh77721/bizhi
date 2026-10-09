@@ -8,8 +8,9 @@ import {
   CrawledImage,
   mergeSourceCategories,
   readImageMeta,
-  composeTitle,
+  composeUniqueTitle,
   isUnsafeText,
+  isAiContent,
 } from './sources';
 import { sleep, USER_AGENT } from './sources/http';
 
@@ -20,9 +21,9 @@ export interface CrawlOptions {
   sources?: string[];
   /** 指定分类 key（可写全名 avatar_xxx，也可只写 avatar_ 之后的部分）；不传则抓该源匹配到的全部分类 */
   categories?: string[];
-  /** 每个分类最多翻多少页（默认 5） */
+  /** 每个分类最多探测多少页（默认 50）。老分类前若干页往往全是已入库的图，需要往后翻才能捞到新图 */
   maxPages?: number;
-  /** 每个分类最多入库多少张（默认 60；已存在的数量计入额度） */
+  /** 每个分类**本次**最多新增多少张（默认 60）。按本次新增计数，已入库的历史素材不占用额度 */
   maxImagesPerCategory?: number;
   /** 只抓该日期之后的图（YYYY-MM-DD）；仅对能拿到发布时间的源生效 */
   dateFrom?: string;
@@ -60,6 +61,13 @@ export interface CrawlTaskState {
 
 /** 一次请求向源站要多少条 */
 const PAGE_BATCH = 40;
+
+/**
+ * 每个分类默认最多探测多少页。
+ * 不能设太小：重复抓取时前若干页往往全是已入库的图，必须往后翻才能捞到新图。
+ * 实际会在「本次新增额度用满」或「源站翻到末页」时提前结束，所以这里给足冗余即可。
+ */
+const DEFAULT_MAX_PAGES = 50;
 
 /** 头像：要求接近方形（避免把长图/表情包混进头像频道） */
 const AVATAR_RATIO = { min: 0.7, max: 1.43 };
@@ -261,13 +269,13 @@ export class CrawlerService {
       return opts.categories.includes(c.key) || opts.categories.includes(stripPrefix(c.key));
     });
 
-    // 2) 抓取上下文：按分类实时计数 + 跨源 URL 去重 + 分分类标题去重
-    const maxPages = Math.max(1, opts.maxPages || 5);
+    // 2) 抓取上下文：本次新增额度计数 + 跨源 URL 去重 + 分分类标题去重
     const max = Math.max(1, opts.maxImagesPerCategory || 60);
-    const perCategory = new Map<string, number>();
-    for (const c of synced) {
-      perCategory.set(c.key, data.materials.filter((m) => m.category === c.key).length);
-    }
+    const maxPages = Math.max(1, opts.maxPages || DEFAULT_MAX_PAGES);
+    // 额度按「本次新增」计：每个分类本次最多新增 max 张，历史库存不占用额度。
+    // （旧实现用分类存量做判据，导致分类攒够 max 张后再抓取会被整个跳过、永远零新增）
+    const addedByCategory = new Map<string, number>();
+    for (const c of synced) addedByCategory.set(c.key, 0);
     const knownIds = new Set(data.materials.map((m) => m.id));
     const knownUrls = new Set(data.materials.map((m) => m.url));
     const titlesByCategory = new Map<string, Set<string>>();
@@ -291,15 +299,20 @@ export class CrawlerService {
       const stat: Stat = { created: 0, skipped: 0, errors: 0 };
 
       for (const { cat, sc } of targets) {
-        let got = perCategory.get(cat.key) ?? 0;
-        if (got >= max) {
+        if ((addedByCategory.get(cat.key) ?? 0) >= max) {
+          stat.skipped++;
+          continue;
+        }
+        // 整类跳过 AI 分类：若某个分类的检索词/名称本身就是 AI 内容（如「AI壁纸」），
+        // 整类不抓，避免逐条白跑。
+        if (isAiContent(sc.keyword, cat.label)) {
           stat.skipped++;
           continue;
         }
         this.task.progress = `${src.name} · ${cat.label} · 已新增 ${total.created}`;
 
         for (let page = 1; page <= maxPages; page++) {
-          if (got >= max) break;
+          if ((addedByCategory.get(cat.key) ?? 0) >= max) break;
           let batch: CrawledImage[] = [];
           try {
             batch = await src.fetchPage({ keyword: sc.keyword, page, limit: PAGE_BATCH });
@@ -317,7 +330,7 @@ export class CrawlerService {
           if (!batch.length) break;
 
           for (const item of batch) {
-            if (got >= max) break;
+            if ((addedByCategory.get(cat.key) ?? 0) >= max) break;
 
             const id = `${src.id}_${item.sid}`;
             if (knownIds.has(id) || knownUrls.has(item.url)) {
@@ -329,13 +342,21 @@ export class CrawlerService {
               continue;
             }
 
+            // 跳过 AI 生成内容：源站把「AI绘画/AI生成/Midjourney」的图混在
+            // 正常分类里，光靠分类过滤挡不住，必须按标题/标签逐条识别。
+            // 放在下载之前，避免为注定被丢弃的图浪费带宽与对象存储额度。
+            if (isAiContent(item.title, ...(item.tags || []))) {
+              stat.skipped++;
+              continue;
+            }
+
             // 归类：源可覆盖默认分类（如彼岸图网的混装列表）
             const categoryKey = src.resolveCategory?.(item, cat.key) || cat.key;
             const category = synced.find((c) => c.key === categoryKey) || cat;
-            // 目标分类自身也有额度上限（重定向后 cat.key 与 category.key 可能不同，
+            // 目标分类自身也有本次新增额度（重定向后 cat.key 与 category.key 可能不同，
             // 必须按最终落库的分类单独判额度，否则会把某个分类灌爆）
-            const targetCount = perCategory.get(categoryKey) ?? 0;
-            if (targetCount >= max) {
+            const targetAdded = addedByCategory.get(categoryKey) ?? 0;
+            if (targetAdded >= max) {
               stat.skipped++;
               continue;
             }
@@ -407,8 +428,7 @@ export class CrawlerService {
             knownIds.add(id);
             knownUrls.add(item.url);
             titlesByCategory.get(categoryKey)?.add(title);
-            perCategory.set(categoryKey, targetCount + 1);
-            got++;
+            addedByCategory.set(categoryKey, targetAdded + 1);
             stat.created++;
             total.created++;
             this.task.progress = `${src.name} · ${category.label} · 已新增 ${total.created}`;
@@ -440,7 +460,8 @@ export class CrawlerService {
 
   /**
    * 生成标题：优先源站真标题，其次标签组合，最后形容词池。
-   * 同分类内撞车时换一个形容词重试，最多 4 次，仍撞则加序号兜底。
+   * 实现复用 sources/title.ts 的 composeUniqueTitle —— 与存量标题回填走同一套规则，
+   * 避免「新图用新规则、老图用老规则」两套逻辑分叉。
    */
   private pickTitle(args: {
     item: CrawledImage;
@@ -450,25 +471,9 @@ export class CrawlerService {
     used: Set<string>;
   }): string {
     const { item, label, type, keyword, used } = args;
-    for (let attempt = 0; attempt < 4; attempt++) {
-      const t = composeTitle({
-        rawTitle: item.title,
-        tags: item.tags,
-        label,
-        type,
-        sid: item.sid,
-        keyword,
-        attempt,
-      });
-      if (t && !used.has(t)) return t;
-    }
-    const base = composeTitle({ rawTitle: item.title, tags: item.tags, label, type, sid: item.sid, keyword });
-    let n = 2;
-    let candidate = `${base}${n}`;
-    while (used.has(candidate) && n < 99) {
-      n++;
-      candidate = `${base}${n}`;
-    }
-    return candidate;
+    return composeUniqueTitle(
+      { rawTitle: item.title, tags: item.tags, label, type, sid: item.sid, keyword },
+      used,
+    );
   }
 }

@@ -8,10 +8,6 @@ export interface AppConfig {
   adminPassword: string; // 管理后台登录口令（勿泄露，不向下发）
   bannerAdId: string;   // 流量主 banner 广告位 ID（空=隐藏）
   rewardAdId: string;   // 流量主激励视频广告位 ID（空=解锁降级）
-  aiModel: string;      // AI 生图模型
-  aiModelEndpoint: string; // AI 生图模型地址（modelBaseUrl），留空用平台默认
-  aiSize: string;       // AI 生图尺寸档位（SDK 仅支持 2K / 4K）
-  aiSystemPrompt: string; // 生图 prompt 润色时可追加的系统约束
   // 对象存储（七牛云 S3 兼容）——用于后台上传壁纸素材的远程存储
   ossEndpoint: string;  // 七牛云 S3 兼容访问域名（如 https://s3-cn-east-1.qiniucs.com）
   ossBucket: string;    // 空间（Bucket）名称
@@ -22,15 +18,11 @@ export interface AppConfig {
 }
 
 const DEFAULT_CONFIG: AppConfig = {
-  appName: 'AI头像壁纸大全',
+  appName: '简影壁纸馆',
   contactEmail: 'admin@example.com',
   adminPassword: 'admin888',
   bannerAdId: '',
   rewardAdId: '',
-  aiModel: 'doubao-seedream-4-5-251128',
-  aiModelEndpoint: '',
-  aiSize: '2K',
-  aiSystemPrompt: '',
   ossEndpoint: '',
   ossBucket: '',
   ossRegion: 'cn-east-1',

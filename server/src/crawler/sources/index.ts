@@ -31,4 +31,4 @@ export function mergeSourceCategories(): { key: string; label: string; type: 'av
 
 export * from './types';
 export { readImageMeta } from './image';
-export { composeTitle, isUnsafeText } from './title';
+export { composeTitle, composeUniqueTitle, isTitleMeaningless, isUnsafeText, isAiContent } from './title';

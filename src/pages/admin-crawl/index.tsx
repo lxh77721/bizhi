@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Taro from '@tarojs/taro';
 import { View, Text } from '@tarojs/components';
 import { Network } from '@/network';
@@ -8,45 +8,28 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Play } from 'lucide-react-taro';
 import { authHeader, handleUnauthorized } from '../admin/shared';
 
-/** 可选抓取源（与 server/src/crawler/sources/index.ts 的 SOURCES 对应） */
-const CRAWL_SOURCE_OPTIONS: { id: string; label: string; desc: string; on: boolean }[] = [
-  { id: 'dt', label: '堆糖', desc: '主源 · 头像+壁纸 · 量大 · 原图 1080×2340', on: true },
-  { id: 'nb', label: '彼岸图网', desc: '4K竖屏壁纸 · 自带真实中文标题', on: true },
-  { id: 'bi', label: '必应图搜', desc: '全网补充 · 噪音较多，按需启用', on: false },
-];
+/** 后端 GET /api/admin/crawl/sources 下发的分类；existing = 该分类当前已入库张数 */
+interface ApiCategory {
+  key: string;
+  label: string;
+  type: 'avatar' | 'wallpaper';
+  existing: number;
+}
 
-const CRAWL_CAT_OPTIONS: Record<'avatar' | 'wallpaper', { key: string; label: string }[]> = {
-  avatar: [
-    { key: 'avatar_weixintouxiang', label: '微信头像' },
-    { key: 'avatar_nvshengtouxiang', label: '女生头像' },
-    { key: 'avatar_nanshengtouxiang', label: '男生头像' },
-    { key: 'avatar_douyintouxiang', label: '抖音头像' },
-    { key: 'avatar_qinglvtouxiang', label: '情侣头像' },
-    { key: 'avatar_guimitouxiang', label: '闺蜜头像' },
-    { key: 'avatar_keaitouxiang', label: '可爱头像' },
-    { key: 'avatar_dongmantouxiang', label: '动漫头像' },
-    { key: 'avatar_insfengtouxiang', label: 'ins风头像' },
-    { key: 'avatar_gaojigantouxiang', label: '高级感头像' },
-    { key: 'avatar_shadiatouxiang', label: '沙雕头像' },
-    { key: 'avatar_emotouxiang', label: 'emo头像' },
-  ],
-  wallpaper: [
-    { key: 'wallpaper_治愈', label: '治愈' },
-    { key: 'wallpaper_暗黑', label: '暗黑' },
-    { key: 'wallpaper_简约', label: '简约' },
-    { key: 'wallpaper_文字', label: '文字' },
-    { key: 'wallpaper_可爱', label: '可爱' },
-    { key: 'wallpaper_艺术', label: '艺术' },
-    { key: 'wallpaper_风景', label: '风景' },
-    { key: 'wallpaper_动漫', label: '动漫' },
-    { key: 'wallpaper_抽象', label: '抽象' },
-    { key: 'wallpaper_苹果', label: '苹果' },
-    { key: 'wallpaper_4K', label: '4K' },
-  ],
-};
+/** 后端下发的抓取源 */
+interface ApiSource {
+  id: string;
+  name: string;
+  desc: string;
+  defaultEnabled: boolean;
+  categories: ApiCategory[];
+}
 
 export default function AdminCrawl() {
-  const [source, setSource] = useState<'avatar' | 'wallpaper'>('avatar');
+  // 源与分类全部由后端下发（来源是 server/src/crawler/sources 的 SOURCES 注册表），
+  // 前端不再硬编码两份列表 —— 否则源里加了分类、页面选不到，或者页面选了源里没有的分类。
+  const [sourceList, setSourceList] = useState<ApiSource[]>([]);
+  const [sourceError, setSourceError] = useState('');
   const [selSources, setSelSources] = useState<string[]>([]);
   const [selCats, setSelCats] = useState<string[]>([]);
   const [qty, setQty] = useState('60');
@@ -56,9 +39,66 @@ export default function AdminCrawl() {
   const [progress, setProgress] = useState('');
   const [result, setResult] = useState<string>('');
 
+  /** 当前选中源支持的分类并集（同 key 只保留一份） */
+  const catOptions = useMemo(() => {
+    const map = new Map<string, ApiCategory>();
+    for (const s of sourceList) {
+      if (!selSources.includes(s.id)) continue;
+      for (const c of s.categories) if (!map.has(c.key)) map.set(c.key, c);
+    }
+    return Array.from(map.values());
+  }, [sourceList, selSources]);
+
+  const avatarCats = catOptions.filter((c) => c.type === 'avatar');
+  const wallpaperCats = catOptions.filter((c) => c.type === 'wallpaper');
+  const allCatKeys = catOptions.map((c) => c.key);
+  const noSource = selSources.length === 0;
+  const canStart = !running && !noSource && selCats.length > 0;
+
   const toggle = (list: string[], setList: (v: string[]) => void, key: string) => {
     setList(list.includes(key) ? list.filter((k) => k !== key) : [...list, key]);
   };
+
+  // 换源后把已不在可选列表里的分类从勾选中剔除；引用不变则返回原数组，避免多余渲染
+  useEffect(() => {
+    setSelCats((prev) => {
+      const next = prev.filter((k) => catOptions.some((c) => c.key === k));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [catOptions]);
+
+  /**
+   * 拉取源与分类。
+   * mode='init'：首次加载 / 失败重试 —— 顺带把源选择重置为「默认启用」的那几个；
+   * mode='silent'：抓取结束后的静默刷新 —— 只更新分类库存数字，**不动用户已做的选择**，失败也不打扰。
+   */
+  const loadSources = async (mode: 'init' | 'silent' = 'init') => {
+    if (mode === 'init') setSourceError('');
+    try {
+      const res = await Network.request({
+        url: '/api/admin/crawl/sources',
+        header: authHeader(),
+      });
+      const list: ApiSource[] = (res.data as any)?.data?.sources || [];
+      setSourceList(list);
+      if (mode === 'init') {
+        setSelSources(list.filter((s) => s.defaultEnabled).map((s) => s.id));
+      }
+    } catch (e: any) {
+      if (e?.statusCode === 401) {
+        handleUnauthorized();
+        return;
+      }
+      if (mode === 'init') {
+        setSourceError(e?.data?.message || '加载抓取源失败，请检查网络或登录状态');
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadSources('init');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 抓取是分钟级任务（多源 × 多分类 × 逐张下载上传），远超小程序 60s 请求超时，
   // 因此后端改为「立即返回 + 后台执行」，这里用轮询读取进度与结果。
@@ -98,6 +138,8 @@ export default function AdminCrawl() {
         const r = d.result;
         const head = `新增 ${r?.created ?? 0} 张，跳过 ${r?.skipped ?? 0}，失败 ${r?.failed ?? 0}`;
         setResult(r?.detail ? `${head}\n${r.detail}` : head);
+        // 抓完刷新各分类的「已有 N 张」（静默，不动用户的选择）
+        loadSources('silent');
       } catch (e: any) {
         if (e?.statusCode === 401) {
           stopPolling();
@@ -132,6 +174,14 @@ export default function AdminCrawl() {
   }, []);
 
   const start = async () => {
+    if (noSource) {
+      Taro.showToast({ title: '请先选择抓取源', icon: 'none' });
+      return;
+    }
+    if (!selCats.length) {
+      Taro.showToast({ title: '请至少勾选一个分类', icon: 'none' });
+      return;
+    }
     setRunning(true);
     setResult('');
     setProgress('正在启动…');
@@ -141,10 +191,9 @@ export default function AdminCrawl() {
         method: 'POST',
         header: authHeader(),
         data: {
-          source,
-          // 不选源 = 使用全部启用的源
-          sources: selSources.length ? selSources : undefined,
-          categories: selCats.length ? selCats : undefined,
+          // 源与分类都显式提交：只有勾选中的分类会被抓取
+          sources: selSources,
+          categories: selCats,
           maxImagesPerCategory: Number(qty) || 60,
           dateFrom: dateFrom || undefined,
           dateTo: dateTo || undefined,
@@ -160,6 +209,25 @@ export default function AdminCrawl() {
     }
   };
 
+  /** 分类可勾选项：显示分类名 + 当前库存，让「只增不覆盖」可见 */
+  const renderCat = (c: ApiCategory) => {
+    const on = selCats.includes(c.key);
+    return (
+      <View
+        key={c.key}
+        className={`rounded-lg border px-3 py-2 min-w-[104px] ${
+          on ? 'border-sky-400 bg-sky-50' : 'border-slate-200 bg-white'
+        }`}
+        onClick={() => toggle(selCats, setSelCats, c.key)}
+      >
+        <Text className={`block text-sm ${on ? 'text-sky-700' : 'text-slate-700'}`}>{c.label}</Text>
+        <Text className="block text-xs text-gray-400 mt-1">
+          {c.existing > 0 ? `已有 ${c.existing} 张` : '暂无'}
+        </Text>
+      </View>
+    );
+  };
+
   return (
     <View className="min-h-screen bg-slate-50">
       <View className="bg-white px-4 py-4 border-b border-slate-100">
@@ -167,84 +235,109 @@ export default function AdminCrawl() {
       </View>
 
       <View className="p-4 space-y-4">
+        {/* ---------------- 抓取源 ---------------- */}
         <Card>
           <CardContent className="p-4">
-            <Text className="block text-sm font-medium mb-3">抓取频道</Text>
-            <View className="flex flex-row gap-2">
-              {(['avatar', 'wallpaper'] as const).map((s) => (
-                <Button
-                  key={s}
-                  size="sm"
-                  variant={source === s ? 'default' : 'outline'}
-                  onClick={() => {
-                    setSource(s);
-                    setSelCats([]);
-                  }}
-                >
-                  <Text className="block">{s === 'avatar' ? '头像频道' : '壁纸频道'}</Text>
-                </Button>
-              ))}
-            </View>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <Text className="block text-sm font-medium mb-1">抓取源站点</Text>
+            <Text className="block text-sm font-medium mb-1">抓取源</Text>
             <Text className="block text-xs text-gray-500 mb-3">
-              不选 = 只跑默认源；多个源会依次抓取并自动去重
+              可多选；下方分类会随勾选的源变化。多个源抓同一分类时会自动去重
             </Text>
-            <View className="space-y-2">
-              {CRAWL_SOURCE_OPTIONS.map((s) => {
-                const on = selSources.includes(s.id);
-                return (
-                  <View
-                    key={s.id}
-                    className={`rounded-lg border px-3 py-2 ${
-                      on ? 'border-sky-400 bg-sky-50' : 'border-slate-200 bg-white'
-                    }`}
-                    onClick={() => toggle(selSources, setSelSources, s.id)}
-                  >
-                    <View className="flex flex-row items-center justify-between">
-                      <Text className="block text-sm font-medium">{s.label}</Text>
-                      {s.on ? (
-                        <Text className="block text-xs text-sky-500">默认</Text>
-                      ) : (
-                        <Text className="block text-xs text-gray-400">可选</Text>
-                      )}
+            {sourceError ? (
+              <View className="rounded-lg bg-red-50 px-3 py-3">
+                <Text className="block text-xs text-red-500">{sourceError}</Text>
+                <Text className="block text-xs text-sky-600 mt-2" onClick={() => loadSources('init')}>
+                  点击重试
+                </Text>
+              </View>
+            ) : !sourceList.length ? (
+              <Text className="block text-xs text-gray-400">加载中…</Text>
+            ) : (
+              <View className="space-y-2">
+                {sourceList.map((s) => {
+                  const on = selSources.includes(s.id);
+                  return (
+                    <View
+                      key={s.id}
+                      className={`rounded-lg border px-3 py-2 ${
+                        on ? 'border-sky-400 bg-sky-50' : 'border-slate-200 bg-white'
+                      }`}
+                      onClick={() => toggle(selSources, setSelSources, s.id)}
+                    >
+                      <View className="flex flex-row items-center justify-between">
+                        <Text className={`block text-sm font-medium ${on ? 'text-sky-700' : ''}`}>
+                          {s.name}
+                        </Text>
+                        <Text className="block text-xs text-gray-400">
+                          {s.categories.length} 个分类
+                          {s.defaultEnabled ? '' : ' · 默认关'}
+                        </Text>
+                      </View>
+                      {s.desc ? (
+                        <Text className="block text-xs text-gray-500 mt-1">{s.desc}</Text>
+                      ) : null}
                     </View>
-                    <Text className="block text-xs text-gray-500 mt-1">{s.desc}</Text>
-                  </View>
-                );
-              })}
-            </View>
+                  );
+                })}
+              </View>
+            )}
           </CardContent>
         </Card>
 
+        {/* ---------------- 抓取分类 ---------------- */}
         <Card>
           <CardContent className="p-4">
-            <Text className="block text-sm font-medium mb-1">选择分类</Text>
-            <Text className="block text-xs text-gray-500 mb-3">不选则抓取全部</Text>
-            <View className="flex flex-row flex-wrap gap-2">
-              {CRAWL_CAT_OPTIONS[source].map((c) => (
-                <Button
-                  key={c.key}
-                  size="sm"
-                  variant={selCats.includes(c.key) ? 'default' : 'outline'}
-                  onClick={() => toggle(selCats, setSelCats, c.key)}
-                >
-                  <Text className="block">{c.label}</Text>
-                </Button>
-              ))}
+            <View className="flex flex-row items-center justify-between mb-1">
+              <Text className="block text-sm font-medium">抓取分类</Text>
+              {catOptions.length ? (
+                <View className="flex flex-row gap-3">
+                  <Text className="block text-xs text-sky-600" onClick={() => setSelCats(allCatKeys)}>
+                    全选
+                  </Text>
+                  <Text className="block text-xs text-gray-400" onClick={() => setSelCats([])}>
+                    清空
+                  </Text>
+                </View>
+              ) : null}
             </View>
+            <Text className="block text-xs text-gray-500 mb-3">
+              {noSource
+                ? '请先在上方选择抓取源'
+                : `已选 ${selCats.length} / ${catOptions.length} 个；未勾选的不抓，已有图片只做增量追加、不会被覆盖`}
+            </Text>
+
+            {noSource ? (
+              <Text className="block text-xs text-gray-400">选择抓取源后，这里会列出它支持的分类</Text>
+            ) : !catOptions.length ? (
+              <Text className="block text-xs text-gray-400">所选源没有可抓取的分类</Text>
+            ) : (
+              <View className="space-y-4">
+                {avatarCats.length ? (
+                  <View>
+                    <Text className="block text-xs text-gray-400 mb-2">头像</Text>
+                    <View className="flex flex-row flex-wrap gap-2">{avatarCats.map(renderCat)}</View>
+                  </View>
+                ) : null}
+                {wallpaperCats.length ? (
+                  <View>
+                    <Text className="block text-xs text-gray-400 mb-2">壁纸</Text>
+                    <View className="flex flex-row flex-wrap gap-2">
+                      {wallpaperCats.map(renderCat)}
+                    </View>
+                  </View>
+                ) : null}
+              </View>
+            )}
           </CardContent>
         </Card>
 
+        {/* ---------------- 抓取参数 ---------------- */}
         <Card>
           <CardContent className="p-4 space-y-3">
             <View>
-              <Text className="block text-sm font-medium mb-2">每个分类抓取张数</Text>
-              <Text className="block text-xs text-gray-500 mb-2">已入库的张数会占用额度</Text>
+              <Text className="block text-sm font-medium mb-2">每个分类最多新增张数</Text>
+              <Text className="block text-xs text-gray-500 mb-2">
+                每次抓取按「本次新增」计数，已入库的图不占额度，可反复增量补图
+              </Text>
               <View className="bg-slate-50 rounded-lg px-3 py-2">
                 <Input
                   className="w-full bg-transparent"
@@ -283,10 +376,15 @@ export default function AdminCrawl() {
           </CardContent>
         </Card>
 
-        <Button className="w-full" onClick={start} disabled={running}>
+        <Button className="w-full" onClick={start} disabled={!canStart}>
           <Play size={16} className="mr-2" color="#ffffff" />
           <Text>{running ? '抓取中…' : '开始抓取'}</Text>
         </Button>
+        {!running && !canStart ? (
+          <Text className="block text-xs text-gray-400 text-center">
+            {noSource ? '请先选择抓取源' : '请至少勾选一个分类'}
+          </Text>
+        ) : null}
 
         {running ? (
           <Card>

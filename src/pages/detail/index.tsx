@@ -279,17 +279,28 @@ const DetailPage = () => {
         {related.length > 0 ? (
           <View className="mt-6">
             <Text className="block text-sm font-semibold text-gray-800">相关推荐</Text>
-            <View className="mt-3 flex flex-row flex-wrap gap-2">
+            {/* 三列网格：用「每项 33.33% + 右内边距」做间隙，容器负 margin 把最后一项的
+                内边距抵消掉，保证最右侧与上方文字严格对齐、不留空白。
+                不要用 width%+gap —— 三列加上 gap 必然超过 100%，会掉成两列、右侧空一大块 */}
+            <View className="mt-3 flex flex-row flex-wrap" style={{ marginRight: '-8px' }}>
               {related.map((m) => (
-                <Navigator
+                <View
                   key={m.id}
-                  url={`/pages/detail/index?id=${m.id}`}
-                  className="block overflow-hidden rounded-xl bg-slate-50 shadow-sm"
-                  style={{ width: '32%' }}
-                  hoverClass="opacity-90"
+                  style={{
+                    width: '33.33%',
+                    boxSizing: 'border-box',
+                    paddingRight: '8px',
+                    paddingBottom: '8px',
+                  }}
                 >
-                  <Image className="w-full" mode="widthFix" src={assetUrl(m.thumbUrl)} lazyLoad />
-                </Navigator>
+                  <Navigator
+                    url={`/pages/detail/index?id=${m.id}`}
+                    className="block overflow-hidden rounded-xl bg-slate-50 shadow-sm"
+                    hoverClass="opacity-90"
+                  >
+                    <Image className="w-full" mode="widthFix" src={assetUrl(m.thumbUrl)} lazyLoad />
+                  </Navigator>
+                </View>
               ))}
             </View>
           </View>

@@ -6,10 +6,6 @@ export interface PublicConfig {
   contactEmail: string;
   bannerAdId: string;
   rewardAdId: string;
-  aiModel: string;
-  aiModelEndpoint?: string;
-  aiSize: string;
-  aiSystemPrompt: string;
   ossEndpoint?: string;
   ossBucket?: string;
   ossRegion?: string;

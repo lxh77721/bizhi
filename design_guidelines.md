@@ -1,14 +1,14 @@
 # 设计指南 (design_guidelines)
 
-> 项目：AI头像壁纸大全（微信小程序 · 流量主变现）
+> 项目：简影壁纸馆（头像/壁纸素材小程序 · 微信小程序 · 流量主变现）
 > 风格：简约清新 · 白色背景 · 圆角卡片 · 两列瀑布流 · 移动端优先
 
 ## 品牌定位
-清新、治愈的"头像/壁纸素材小画廊"，浏览免费、看激励视频解锁高清下载。目标用户在微信搜一搜搜索"头像、壁纸、情侣头像、手机壁纸、AI头像、治愈壁纸"等词进入。
+清新、治愈的"头像/壁纸素材小画廊"，浏览免费、看激励视频解锁高清下载。目标用户在微信搜一搜搜索"头像、壁纸、情侣头像、手机壁纸、女生头像、治愈壁纸"等词进入。
 
 ## 配色方案（Tailwind 类名）
 - 品牌主色：`#4C9DF5`（清新天蓝）→ `bg-blue-500` / `text-blue-500` / `ring-blue-500`
-- 品牌渐变：`from-cyan-400 to-blue-500`（AI 主 CTA 用）
+- 品牌渐变：`from-cyan-400 to-blue-500`（主 CTA 用）
 - 背景：`bg-white`；次级底 `bg-slate-50`（`#F5F7FB` 用 `bg-slate-50`）
 - 主文本：`text-gray-800`（`#1F2937`）；次要 `text-gray-500`（`#6B7280`）
 - 推荐/解锁按钮：`bg-amber-500`（`#FF9F43` 暖橙）
@@ -43,7 +43,7 @@
 - 全部使用 `block` 类避免 H5 白屏。
 
 ## 导航结构
-- 3 个 TabBar 页面：首页(`pages/index/index`)、AI生成(`pages/ai/index`)、关于(`pages/about/index`)
+- 4 个 TabBar 页面：首页(`pages/index/index`)、头像(`pages/avatar/index`)、壁纸(`pages/wallpaper/index`)、我的(`pages/about/index`)
 - 子页面：素材详情(`pages/detail/index`)——普通跳转，不进 TabBar
 - TabBar 跳转用 `switchTab`，普通页面用 `navigateTo`
 - TabBar 图标：本地 PNG（`./assets/tabbar/*`），用 lucide 工具生成

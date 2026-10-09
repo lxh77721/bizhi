@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { FileStore } from '@/common/file-store.service';
 import { createHash } from 'crypto';
 import { MATERIALS, CATEGORIES, MaterialItem, Category } from '@/materials/materials.data';
+import { composeUniqueTitle, isTitleMeaningless } from '@/crawler/sources/title';
 
 export interface QueryMaterialDto {
   category?: string;
@@ -189,6 +190,85 @@ export class MaterialsService implements OnModuleInit {
     this.cache.materials = this.cache.materials.filter((m) => m.id !== id);
     if (this.cache.materials.length === before) throw new Error('图片不存在');
     this.store.write('materials.json', this.cache);
+  }
+
+  /* ---------------------- 存量素材标题回填 ---------------------- */
+
+  /**
+   * 重写「无区分度」的存量标题（幂等：只改 title / tags，不动 id / url / category）
+   * --------------------------------------------------------------------------
+   * 早期爬虫直接把分类名当标题。实测存量 168 张素材只有 25 个不同标题：
+   *   147 张集中在 4 个分类名上（「女生头像」40 张、「微信头像」39 张…），
+   *   另 15 张是源站图片 ID（如 G03j1HrWUAAYHiz）。
+   * 微信搜一搜按页面判重，标题相同的详情页互相覆盖，绝大部分拿不到收录；
+   * 标题是乱码 ID 的页面即使被收录，也没有任何用户会搜的词能命中。
+   *
+   * 本方法可反复执行：已经有区分度的标题原样保留，不会被改来改去。
+   * 走的是与抓取完全相同的 composeUniqueTitle，新老素材标题规则一致。
+   */
+  retitleExisting(): {
+    total: number;
+    changed: number;
+    tagsFixed: number;
+    kept: number;
+    uniqueBefore: number;
+    uniqueAfter: number;
+    samples: Array<{ id: string; before: string; after: string }>;
+  } {
+    this.current();
+    const { materials, categories } = this.cache;
+    const labelOf = new Map(categories.map((c) => [c.key, c.label]));
+    const typeOf = new Map(
+      categories.map((c) => [c.key, (c.type || 'avatar') as 'avatar' | 'wallpaper']),
+    );
+
+    const uniqueBefore = new Set(materials.map((m) => m.title)).size;
+
+    // 已有区分度的标题先占位：回填结果不得与之撞车，否则只是把重复挪了个位置
+    const used = new Set<string>();
+    const pending: MaterialItem[] = [];
+    for (const m of materials) {
+      const label = labelOf.get(m.category) || m.category;
+      if (isTitleMeaningless(m.title, label)) pending.push(m);
+      else used.add(m.title);
+    }
+
+    const samples: Array<{ id: string; before: string; after: string }> = [];
+    let changed = 0;
+    for (const m of pending) {
+      const label = labelOf.get(m.category) || m.category;
+      const type = typeOf.get(m.category) || 'avatar';
+      const next = composeUniqueTitle({ label, type, sid: m.id, keyword: label }, used);
+      used.add(next);
+      if (m.title === next) continue;
+      if (samples.length < 8) samples.push({ id: m.id, before: m.title, after: next });
+      m.title = next;
+      changed++;
+    }
+
+    // tags 规整：不限于标题被改的素材。详情页会把 tags 渲染成标签胶囊，
+    // 首项与标题保持一致，页面上的文本才和标题对得上
+    let tagsFixed = 0;
+    for (const m of materials) {
+      const label = labelOf.get(m.category) || m.category;
+      const want = Array.from(new Set([m.title, label])).slice(0, 4);
+      if (JSON.stringify(want) !== JSON.stringify(m.tags || [])) {
+        m.tags = want;
+        tagsFixed++;
+      }
+    }
+
+    if (changed || tagsFixed) this.store.write('materials.json', this.cache);
+
+    return {
+      total: materials.length,
+      changed,
+      tagsFixed,
+      kept: materials.length - pending.length,
+      uniqueBefore,
+      uniqueAfter: new Set(materials.map((m) => m.title)).size,
+      samples,
+    };
   }
 
   /* ------------------------------- 工具 ------------------------------- */

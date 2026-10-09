@@ -196,6 +196,18 @@ export default function SourceList({
         </View>
       ) : null}
 
+      {/* 常见问题入口：与首页同样提供一条直达 FAQ 的静态内链，让爬虫在频道页也能发现它 */}
+      <View className="px-4 pb-4">
+        <Navigator
+          url="/pages/faq/index"
+          className="flex flex-row items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
+          hoverClass="opacity-90"
+        >
+          <Text className="block text-sm text-gray-600">常见问题：怎么下载 / 能商用吗</Text>
+          <Text className="block text-xs text-blue-500">查看 ›</Text>
+        </Navigator>
+      </View>
+
       {/* 底部常驻 Banner 广告位（仅微信小程序且配置了广告 ID 时展示，避免在其它端/未开通时留下白条） */}
       {isWeapp && BANNER_AD_ID ? (
         <View

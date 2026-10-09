@@ -68,6 +68,7 @@ const MIN_EDGE = 320;
 export const duitangSource: CrawlSource = {
   id: 'dt',
   name: '堆糖',
+  desc: '主源 · 头像 + 壁纸 · 量最大 · 原图多为 1080×2340 · 无防盗链',
   categories: CATEGORIES,
 
   async fetchPage({ keyword, page, limit }): Promise<CrawledImage[]> {

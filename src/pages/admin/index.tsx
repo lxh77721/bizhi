@@ -125,7 +125,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     },
     {
       title: '系统配置',
-      desc: '广告 / 存储 / 生图',
+      desc: '广告 / 对象存储',
       icon: <SettingsIcon size={24} color="#f59e0b" />,
       bg: 'bg-amber-50',
       url: '/pages/admin-config/index',
@@ -155,7 +155,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   const cards = [
     { label: '图片总数', value: stats?.materialCount ?? '-', color: 'text-blue-500' },
     { label: '分类总数', value: stats?.categoryCount ?? '-', color: 'text-emerald-500' },
-    { label: '生成次数', value: stats?.generateCount ?? '-', color: 'text-violet-500' },
     { label: '解锁次数', value: stats?.unlockCount ?? '-', color: 'text-amber-500' },
   ];
 

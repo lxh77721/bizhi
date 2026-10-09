@@ -4,9 +4,8 @@ import { View, Text } from '@tarojs/components';
 import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { Info, Megaphone, Wand, HardDrive } from 'lucide-react-taro';
+import { Info, Megaphone, HardDrive } from 'lucide-react-taro';
 import { authHeader, handleUnauthorized, PubConfig } from '../admin/shared';
 
 type FieldDef = { key: keyof PubConfig; label: string; hint: string; password?: boolean };
@@ -20,12 +19,6 @@ const basicFields: FieldDef[] = [
 const adFields: FieldDef[] = [
   { key: 'bannerAdId', label: 'Banner 广告位 ID', hint: '流量主 banner；留空则不展示' },
   { key: 'rewardAdId', label: '激励视频广告位 ID', hint: '解锁下载激励视频；留空则降级为直接下载' },
-];
-
-const genFields: FieldDef[] = [
-  { key: 'aiModel', label: '生图模型', hint: '如 doubao-seedream-4-5' },
-  { key: 'aiModelEndpoint', label: '生图模型地址', hint: '留空使用平台默认' },
-  { key: 'aiSize', label: '生图尺寸', hint: '支持 2K / 4K' },
 ];
 
 const ossFields: FieldDef[] = [
@@ -78,7 +71,6 @@ export default function AdminConfig() {
   const groups = [
     { title: '基础信息', icon: <Info size={18} color="#4c9df5" />, fields: basicFields },
     { title: '广告配置', icon: <Megaphone size={18} color="#f59e0b" />, fields: adFields },
-    { title: '生图配置', icon: <Wand size={18} color="#8b5cf6" />, fields: genFields },
     { title: '对象存储（阿里云 OSS）', icon: <HardDrive size={18} color="#10b981" />, fields: ossFields },
   ];
 
@@ -111,21 +103,6 @@ export default function AdminConfig() {
                     </View>
                   </View>
                 ))}
-                {g.title === '生图配置' ? (
-                  <View>
-                    <Text className="block text-sm text-slate-600 mb-2">
-                      Prompt 附加约束（可选）
-                    </Text>
-                    <View className="bg-slate-50 rounded-lg p-3">
-                      <Textarea
-                        style={{ width: '100%', minHeight: '80px', backgroundColor: 'transparent' }}
-                        value={cfg.aiSystemPrompt || ''}
-                        placeholder="如：柔和治愈色调"
-                        onInput={(e) => setVal('aiSystemPrompt', e.detail.value)}
-                      />
-                    </View>
-                  </View>
-                ) : null}
               </View>
             </CardContent>
           </Card>

@@ -99,6 +99,7 @@ async function runPool<T, R>(items: T[], concurrency: number, fn: (item: T) => P
 export const netbianSource: CrawlSource = {
   id: 'nb',
   name: '彼岸图网',
+  desc: '4K 竖屏壁纸专区 · 自带真实中文标题 · 抓到的图按标题二次归类',
   categories: CATEGORIES,
 
   async fetchPage({ page }): Promise<CrawledImage[]> {

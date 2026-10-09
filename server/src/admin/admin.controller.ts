@@ -139,6 +139,16 @@ export class AdminController {
     return { status: 'success' };
   }
 
+  /** POST /api/admin/materials/retitle  回填存量素材中「无区分度」的标题
+   *  早期爬虫直接把分类名当标题，同分类几十张图标题完全一样、或有的是源站 ID 乱码，
+   *  详情页之间被判重、搜一搜拿不到收录。本接口重新生成标题（幂等，可反复执行）。
+   *  只改 title / tags，不动 id / url / category —— 图片与分类记录零丢失。 */
+  @Post('materials/retitle')
+  retitleMaterials() {
+    const result = this.materialsService.retitleExisting();
+    return { status: 'success', data: result };
+  }
+
   /* ------------------------- 分类管理 ------------------------- */
 
   @Post('categories')
@@ -197,6 +207,8 @@ export class AdminController {
    *  body: { source?: 'avatar'|'wallpaper', sources?: string[], categories?: string[],
    *          maxPages?: number, maxImagesPerCategory?: number, dateFrom?: string, dateTo?: string }
    *  sources 为抓取源 id 列表：dt=堆糖、nb=彼岸图网、bi=必应图搜；不传则使用全部启用的源
+   *  categories 为要抓取的本站分类 key 列表；**不传 = 抓该源匹配到的全部分类**。
+   *  后台页只在勾选后才提交，因此「不勾选就不抓」由前端拦截（未勾选时按钮不可点）
    *  抓取耗时通常分钟级，请用 GET /api/admin/crawl/status 轮询进度与结果 */
   @Post('crawl')
   async crawl(
@@ -232,17 +244,30 @@ export class AdminController {
     return { status: 'success', data: this.crawler.getTaskState() };
   }
 
-  /** GET /api/admin/crawl/sources  可用的抓取源与各自支持的分类（供后台渲染选项） */
+  /** GET /api/admin/crawl/sources  可用的抓取源与各自支持的分类（供后台渲染选项）
+   *  分类附带 existing = 该分类当前已入库的素材数。后台展示为「已有 N 张」，
+   *  让操作者直观看到抓取是**增量追加**，不会覆盖已有图片。 */
   @Get('crawl/sources')
   crawlSources() {
+    const materials = this.materialsService.getData().materials || [];
+    const countByCategory = new Map<string, number>();
+    for (const m of materials) {
+      countByCategory.set(m.category, (countByCategory.get(m.category) || 0) + 1);
+    }
     return {
       status: 'success',
       data: {
         sources: CRAWL_SOURCES.map((s) => ({
           id: s.id,
           name: s.name,
+          desc: s.desc || '',
           defaultEnabled: s.defaultEnabled !== false,
-          categories: s.categories.map((c) => ({ key: c.key, label: c.label, type: c.type })),
+          categories: s.categories.map((c) => ({
+            key: c.key,
+            label: c.label,
+            type: c.type,
+            existing: countByCategory.get(c.key) || 0,
+          })),
         })),
       },
     };

@@ -4,7 +4,7 @@ import { View, Text, Image } from '@tarojs/components';
 import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Images, Trash2, ImagePlus } from 'lucide-react-taro';
+import { Images, Trash2, ImagePlus, Sparkles } from 'lucide-react-taro';
 import {
   authHeader,
   handleUnauthorized,
@@ -18,6 +18,7 @@ export default function AdminPictures() {
   const [materials, setMaterials] = useState<AdminMaterial[]>([]);
   const [categoryKey, setCategoryKey] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [retitling, setRetitling] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -111,6 +112,33 @@ export default function AdminPictures() {
     }
   };
 
+  /**
+   * 批量修正重复标题：把「标题=分类名 / 标题=源站ID」的老素材重新生成互不重复的标题。
+   * 只改标题，不动图片与分类，可反复执行。
+   */
+  const retitle = async () => {
+    setRetitling(true);
+    try {
+      const res = await Network.request({
+        url: '/api/admin/materials/retitle',
+        method: 'POST',
+        header: authHeader(),
+      });
+      const r = (res.data as any)?.data || {};
+      Taro.showModal({
+        title: '标题已优化',
+        content: `共 ${r.total ?? 0} 张图片，本次修改 ${r.changed ?? 0} 张，保留 ${r.kept ?? 0} 张。\n不同标题数：${r.uniqueBefore ?? '-'} → ${r.uniqueAfter ?? '-'}`,
+        showCancel: false,
+      });
+      load();
+    } catch (e: any) {
+      if (e?.statusCode === 401) handleUnauthorized();
+      else Taro.showToast({ title: e?.message || '优化失败', icon: 'none' });
+    } finally {
+      setRetitling(false);
+    }
+  };
+
   const remove = (id: string) => {
     Taro.showModal({
       title: '删除图片',
@@ -188,6 +216,24 @@ export default function AdminPictures() {
             >
               <ImagePlus size={18} className="mr-2" color="#ffffff" />
               <Text>{uploading ? '上传中…' : '点击选择图片并上传'}</Text>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* 批量修正标题：早期抓取的图片标题是分类名（同分类几十张图标题完全一样）
+            或源站 ID 乱码，搜一搜会按页面判重，这些详情页几乎拿不到收录 */}
+        <Card className="mt-4">
+          <CardContent className="p-4">
+            <Text className="block text-sm font-medium mb-1">批量修正重复标题</Text>
+            <Text className="block text-xs text-slate-400 mb-3">
+              早期抓取的图片标题就是分类名（同一分类几十张图标题一模一样），还有一部分是源站
+              ID 乱码。这些详情页会因为标题重复被判重、搜一搜很难收录。点一下为它们重新生成
+              互不重复的标题，<Text className="text-slate-500">只改标题，不动图片和分类</Text>。
+              已经有独立标题的图片会原样保留，可反复执行。
+            </Text>
+            <Button className="w-full" onClick={retitle} disabled={retitling}>
+              <Sparkles size={18} className="mr-2" color="#ffffff" />
+              <Text>{retitling ? '处理中…' : '一键优化标题'}</Text>
             </Button>
           </CardContent>
         </Card>

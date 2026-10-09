@@ -52,6 +52,8 @@ export interface CrawlSource {
   id: string;
   /** 源展示名（后台可选） */
   name: string;
+  /** 源说明，后台「抓取素材」页展示，让操作者知道这个源擅长什么 */
+  desc?: string;
   /**
    * 是否默认参与抓取。默认 true。
    * 达不到质量要求的源设为 false：不显式指定时不会被跑，但后台仍可手动勾选启用

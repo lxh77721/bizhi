@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text } from '@tarojs/components';
+import { View, Text, Navigator } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import {
   Heart, Download, KeyRound, MessageCircle, Mail, User, LogIn, LogOut, ChevronRight,
@@ -76,18 +76,41 @@ export default function Mine() {
 
   const onCopyMail = () => Taro.setClipboardData({ data: email, success: () => toast.success('邮箱已复制') });
 
-  const row = (icon: React.ReactNode, label: string, onClick: () => void, right?: string) => (
-    <View className="flex flex-row items-center justify-between py-3" onClick={onClick}>
-      <View className="flex flex-row items-center gap-3">
-        {icon}
-        <Text className="block text-sm text-gray-700">{label}</Text>
+  /**
+   * 功能行。传了 url 就用 <Navigator> 渲染，而不是 Taro.navigateTo：
+   * 微信搜一搜爬虫不执行 JS、只能沿 <navigator> 遍历页面，
+   * 用 JS 跳转的页面对爬虫等于不存在（FAQ 页曾因此成为「孤岛」，无法被收录）。
+   */
+  const row = (icon: React.ReactNode, label: string, onClick: () => void, right?: string, url?: string) => {
+    const inner = (
+      <>
+        <View className="flex flex-row items-center gap-3">
+          {icon}
+          <Text className="block text-sm text-gray-700">{label}</Text>
+        </View>
+        <View className="flex flex-row items-center gap-1">
+          {right ? <Text className="block text-xs text-gray-400">{right}</Text> : null}
+          <ChevronRight size={16} color="#cbd5e1" />
+        </View>
+      </>
+    );
+    if (url) {
+      return (
+        <Navigator
+          url={url}
+          className="flex flex-row items-center justify-between py-3"
+          hoverClass="opacity-90"
+        >
+          {inner}
+        </Navigator>
+      );
+    }
+    return (
+      <View className="flex flex-row items-center justify-between py-3" onClick={onClick}>
+        {inner}
       </View>
-      <View className="flex flex-row items-center gap-1">
-        {right ? <Text className="block text-xs text-gray-400">{right}</Text> : null}
-        <ChevronRight size={16} color="#cbd5e1" />
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View className="min-h-screen bg-white px-4 py-6">
@@ -126,7 +149,7 @@ export default function Mine() {
           <View className="h-px bg-slate-50" />
           {row(<KeyRound size={18} color="#f59e0b" />, '口令取图', () => setCodeOpen(true))}
           <View className="h-px bg-slate-50" />
-          {row(<MessageCircle size={18} color="#10b981" />, '常见问题', () => go('/pages/faq/index'))}
+          {row(<MessageCircle size={18} color="#10b981" />, '常见问题', () => {}, undefined, '/pages/faq/index')}
           <View className="h-px bg-slate-50" />
           {row(<Mail size={18} color="#8b5cf6" />, '侵权投诉 / 反馈', () => setMailOpen(true))}
         </View>

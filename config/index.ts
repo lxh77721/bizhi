@@ -25,26 +25,53 @@ const serverPort = resolvePort(process.env.SERVER_PORT, 3000);
  * --------------------------------------------------------------------------
  * 作用：声明哪些页面允许被「微信搜一搜」的爬虫索引。
  *
- * 为什么必须显式声明：本项目所有页面跳转都走 Taro.navigateTo（JS 跳转），
- * 而微信爬虫只能沿着 <navigator> 组件遍历页面，无法执行 JS。
- * 因此若不声明收录范围，除首页外的页面（尤其是详情页）几乎不会被索引。
+ * 官方规则要点（developers.weixin.qq.com/miniprogram/dev/reference/configuration/sitemap.html）：
+ *  1. page 字段的 "*" 表示「所有页面」，**不能当通配符用** ——
+ *     写不出 `pages/detail/*` 这种前缀匹配，所以不允许收录的页面必须逐条列出。
+ *  2. priority 值越大规则越早被匹配；不带 priority 时按数组从上到下匹配。
+ *  3. params 声明该页面收录时用到的参数「名称」（不含值），matching=inclusive 表示
+ *     「只要包含这些参数就命中」，用于给带参数的页面（详情页 ?id=、专题页 ?category=）
+ *     做更精确的显式声明，官方例子里这类规则会被「优先索引」。
+ *  4. 官方硬性要求：「若小程序爬虫发现的页面数据和真实用户的呈现不一致，
+ *     那么该页面将不会进入索引中」—— 因此 /api/materials 等接口必须保持免登录公开
+ *     （当前 materials.controller 已无任何 guard，爬虫无需身份即可取到与用户相同的数据）。
  *
- * 注意：sitemap 的 page 字段「不支持通配符」（官方文档明确 * 仅表示所有页面），
- * 所以不允许收录的页面必须逐条列出。
+ * 爬虫标识：user-agent 为 mpcrawler、场景值 1129；会在请求头带
+ * X-WXApp-Crawler-Timestamp / -Nonce / -Signature 三个字段，可用于在接口侧识别爬虫。
  */
 const WEAPP_SITEMAP = {
-  desc: '微信搜一搜页面收录规则：内容页全部开放索引，仅排除管理后台与个人中心页面。',
+  desc: '微信搜一搜页面收录规则：内容页全部开放索引并区分优先级，仅排除管理后台与个人中心页面。',
   rules: [
-    // 管理后台：不含用户可搜索的内容，且暴露后台入口有安全风险
-    { action: 'disallow', page: 'pages/admin/index' },
-    { action: 'disallow', page: 'pages/admin-categories/index' },
-    { action: 'disallow', page: 'pages/admin-pictures/index' },
-    { action: 'disallow', page: 'pages/admin-crawl/index' },
-    { action: 'disallow', page: 'pages/admin-config/index' },
-    // 个人中心类页面：内容随用户变化，爬虫抓到的是空页，收录反而拉低质量度
-    { action: 'disallow', page: 'pages/my-likes/index' },
-    { action: 'disallow', page: 'pages/my-downloads/index' },
-    // 兜底规则：其余页面（首页 / 头像 / 壁纸 / 详情 / AI / FAQ 等）全部允许索引
+    // ---- 1) 先屏蔽：管理后台不含用户可搜索的内容，且暴露后台入口有安全风险 ----
+    { action: 'disallow', page: 'pages/admin/index', priority: 1.0 },
+    { action: 'disallow', page: 'pages/admin-categories/index', priority: 1.0 },
+    { action: 'disallow', page: 'pages/admin-pictures/index', priority: 1.0 },
+    { action: 'disallow', page: 'pages/admin-crawl/index', priority: 1.0 },
+    { action: 'disallow', page: 'pages/admin-config/index', priority: 1.0 },
+    // ---- 2) 个人中心类页面：内容随用户变化，爬虫抓到的是空页，收录反而拉低质量度 ----
+    { action: 'disallow', page: 'pages/my-likes/index', priority: 1.0 },
+    { action: 'disallow', page: 'pages/my-downloads/index', priority: 1.0 },
+    // ---- 3) 核心内容页：显式声明 + 提权，引导爬虫把抓取配额优先分给这些页面 ----
+    { action: 'allow', page: 'pages/index/index', priority: 0.9 },
+    {
+      action: 'allow',
+      page: 'pages/detail/index',
+      params: ['id'],
+      matching: 'inclusive',
+      priority: 0.8,
+    },
+    { action: 'allow', page: 'pages/avatar/index', priority: 0.7 },
+    { action: 'allow', page: 'pages/wallpaper/index', priority: 0.7 },
+    {
+      action: 'allow',
+      page: 'pages/topic/index',
+      params: ['category'],
+      matching: 'inclusive',
+      priority: 0.6,
+    },
+    { action: 'allow', page: 'pages/faq/index', priority: 0.5 },
+    // ---- 4) 兜底规则：其余页面（如「我的」）仍允许被索引 ----
+    // 官方默认行为就是「未显式 disallow 的一律允许」，这里显式写出以免日后误伤
     { action: 'allow', page: '*' },
   ],
 };

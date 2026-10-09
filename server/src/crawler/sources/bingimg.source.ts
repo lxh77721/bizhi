@@ -65,6 +65,7 @@ function sidFromUrl(url: string): string {
 export const bingimgSource: CrawlSource = {
   id: 'bi',
   name: '必应图搜',
+  desc: '全网补充 · 语义噪音较多 · 按需启用',
   /**
    * 默认关闭：它本质是通用网页图搜，语义噪音明显
    * （实测搜「沙雕头像 搞笑」会返回「波士顿国际沙雕节」的沙雕作品照片），

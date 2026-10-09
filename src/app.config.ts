@@ -4,7 +4,6 @@ export default defineAppConfig({
     'pages/avatar/index',
     'pages/wallpaper/index',
     'pages/about/index',
-    'pages/ai/index',
     'pages/detail/index',
     'pages/topic/index',
     'pages/admin/index',

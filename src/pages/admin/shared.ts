@@ -38,7 +38,6 @@ export interface AdminCategory {
 export interface AdminStats {
   materialCount: number;
   categoryCount: number;
-  generateCount: number;
   unlockCount: number;
 }
 
@@ -48,10 +47,6 @@ export interface PubConfig {
   adminPassword: string;
   bannerAdId: string;
   rewardAdId: string;
-  aiModel: string;
-  aiModelEndpoint: string;
-  aiSize: string;
-  aiSystemPrompt: string;
   ossEndpoint: string;
   ossBucket: string;
   ossRegion: string;
