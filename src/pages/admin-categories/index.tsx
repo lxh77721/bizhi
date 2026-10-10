@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { View, Text } from '@tarojs/components';
 import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,10 @@ export default function AdminCategories() {
   const [type, setType] = useState<'avatar' | 'wallpaper'>('avatar');
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [name, setName] = useState('');
+  // Taro 会把页面实例留在页面栈里，返回本页不会重新挂载、useEffect 不会重跑，
+  // 于是抓取/新增后返回这里仍显示进入时的旧数据。用「每次显示」重新拉取来解决。
+  const [showSeq, setShowSeq] = useState(0);
+  useDidShow(() => setShowSeq((n) => n + 1));
 
   const load = useCallback(async () => {
     try {
@@ -28,7 +32,7 @@ export default function AdminCategories() {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, showSeq]);
 
   const add = async () => {
     if (!name.trim()) {

@@ -93,6 +93,9 @@ export class FileStore implements OnModuleInit, OnApplicationShutdown {
   private flushTimer?: ReturnType<typeof setTimeout>;
   private writeAttempt = 0;
   private shuttingDown = false;
+  /** 是否正在做新鲜度校验（避免并发重入） */
+  private revalidating = false;
+  private lastRevalidateAt = 0;
 
   private readonly stat = {
     writes: 0,
@@ -258,7 +261,7 @@ export class FileStore implements OnModuleInit, OnApplicationShutdown {
   }
 
   /** 从数据库拉取全部 KV 覆盖内存缓存（脏键除外，避免把刚写的改动覆盖掉） */
-  private async loadFromDb(): Promise<void> {
+  private async loadFromDb(quiet = false): Promise<void> {
     const client = getSupabaseClient();
     const { data, error } = await client.from('app_store').select('key, value, updated_at');
     if (error) throw new Error(error.message);
@@ -270,6 +273,7 @@ export class FileStore implements OnModuleInit, OnApplicationShutdown {
     }
     this.dbState = 'ok';
     this.stat.lastDbLoadAt = new Date().toISOString();
+    if (quiet) return;
     this.logger.log(
       `[${this.instanceId}] 已从数据库加载 ${rows.length} 个存储键，覆盖内存缓存`,
     );
@@ -281,6 +285,30 @@ export class FileStore implements OnModuleInit, OnApplicationShutdown {
     }
     if (this.allowSeedWriteToDb()) {
       await this.seedMissingKeysToDb(rows.map((r) => r.key));
+    }
+  }
+
+  /**
+   * 轻量新鲜度校验（供后台读接口调用）。
+   * --------------------------------------------------------------------------
+   * 内存缓存只在启动时与库同步一次；若线上存在多个实例（或同一实例长期不重启），
+   * 别的实例刚抓完写入数据库的数据，本实例的缓存里是没有的 —— 后台就会一直显示旧数量，
+   * 用户看到的就是「提示已新增 N，但图片数量还是 0」。
+   * 这里按最小间隔重新拉一次库（脏键不会被覆盖），让展示始终和数据库一致。
+   */
+  async revalidate(minIntervalMs = 1500): Promise<void> {
+    if (!this.dbEnabled || this.dbState !== 'ok') return;
+    if (this.revalidating || this.shuttingDown) return;
+    const now = Date.now();
+    if (now - this.lastRevalidateAt < minIntervalMs) return;
+    this.revalidating = true;
+    this.lastRevalidateAt = now;
+    try {
+      await this.loadFromDb(true);
+    } catch (err) {
+      this.stat.lastError = (err as Error).message;
+    } finally {
+      this.revalidating = false;
     }
   }
 

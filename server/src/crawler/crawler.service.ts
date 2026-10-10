@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { MaterialsService } from '@/materials/materials.service';
+import { MaterialsService, MaterialsFile } from '@/materials/materials.service';
 import { OssService } from '@/common/oss.service';
+import { FileStore } from '@/common/file-store.service';
 import { MaterialItem, Category } from '@/materials/materials.data';
 import {
   SOURCES,
@@ -45,6 +46,10 @@ export interface CrawlResult {
   /** 兼容旧后台字段名（= errors） */
   failed: number;
   newCategories: number;
+  /** 本次新增是否已确认写入数据库。false = 只进了内存，实例一回收就会丢 */
+  saved: boolean;
+  /** 返回时仍在待落库队列里的键（saved=false 时用来定位） */
+  pending: number;
   detail: string;
 }
 
@@ -61,6 +66,22 @@ export interface CrawlTaskState {
 
 /** 一次请求向源站要多少条 */
 const PAGE_BATCH = 40;
+
+/**
+ * 每新增多少张做一次「落库检查点」。
+ * --------------------------------------------------------------------------
+ * 抓取是分钟级任务，若只在全部结束时保存一次，中途任何意外（实例被回收、
+ * 进程被杀、部署切换）都会让整批成果一起消失。分批保存后最多只丢最后几张，
+ * 且已入库的部分在后台「已有 N 张」里立刻可见。
+ */
+const CHECKPOINT_EVERY = 10;
+
+/**
+ * 单次落库等待上限。数据库失联时 supabase 客户端的请求可能长时间不返回，
+ * 若不设上限，抓取任务会永远停在「正在写入数据库…」，后台再也发不出下一次抓取。
+ * 超时按「未确认落库」处理（返回 saved=false，由前端显式提示）。
+ */
+const FLUSH_TIMEOUT_MS = 20000;
 
 /**
  * 每个分类默认最多探测多少页。
@@ -106,6 +127,7 @@ export class CrawlerService {
   constructor(
     private readonly materials: MaterialsService,
     private readonly oss: OssService,
+    private readonly store: FileStore,
   ) {}
 
   isRunning(): boolean {
@@ -162,6 +184,34 @@ export class CrawlerService {
     }
     this.materials.saveData(data);
     return data.categories;
+  }
+
+  /**
+   * 落库检查点：把当前文档写进存储并**等它真的落库**。
+   * --------------------------------------------------------------------------
+   * 生成任务结束后台异步执行，而 serverless 实例在「没有进行中的请求」时会被回收。
+   * 如果只是 saveData() 然后 fire-and-forget，平台在轮询停止的瞬间回收实例，
+   * 那批写请求就再也不会完成 —— 表现为「后台提示已新增 60 张，但图片数量还是 0」。
+   * 因此每一批新增后都必须 await 到确认落库。
+   */
+  private async checkpoint(data: MaterialsFile): Promise<boolean> {
+    this.materials.saveData(data);
+    return this.flushWithTimeout();
+  }
+
+  /** 等待落库，但不超过 FLUSH_TIMEOUT_MS（超时视为未确认，不阻塞任务收尾） */
+  private async flushWithTimeout(): Promise<boolean> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        this.store.flushNow(),
+        new Promise<boolean>((resolve) => {
+          timer = setTimeout(() => resolve(false), FLUSH_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   /** 日期过滤：优先用源站发布时间，缺失时不拦截（交由分类额度控制） */
@@ -262,6 +312,7 @@ export class CrawlerService {
 
     // 1) 分类并集（只增不删）
     const synced = this.syncCategories(data, mergeSourceCategories());
+    await this.flushWithTimeout(); // 分类表先落库，避免任务开头就中断时新分类丢失
     const stripPrefix = (k: string) => k.replace(/^(avatar|wallpaper)_/, '');
     const selected = synced.filter((c) => {
       if (opts.source && c.type !== opts.source) return false;
@@ -285,6 +336,10 @@ export class CrawlerService {
 
     const total: Stat = { created: 0, skipped: 0, errors: 0 };
     const details: string[] = [];
+    /** 距上次落库检查点又新增了多少张 */
+    let sinceCheckpoint = 0;
+    /** 本次任务是否所有新增都已确认落库（中途任何一次失败都会置 false） */
+    let allSaved = true;
 
     // 3) 逐源抓取
     for (const src of enabled) {
@@ -433,10 +488,22 @@ export class CrawlerService {
             total.created++;
             this.task.progress = `${src.name} · ${category.label} · 已新增 ${total.created}`;
 
+            // 分批落库：长任务中途被回收也不至于整批消失
+            if (++sinceCheckpoint >= CHECKPOINT_EVERY) {
+              sinceCheckpoint = 0;
+              if (!(await this.checkpoint(data))) allSaved = false;
+            }
+
             await sleep(120); // 控制对源站与对象存储的压力
           }
 
           await sleep(320); // 页间间隔
+        }
+
+        // 每个分类收尾也落一次库：用户切回后台就能立刻看到「已有 N 张」在涨
+        if (sinceCheckpoint > 0) {
+          sinceCheckpoint = 0;
+          if (!(await this.checkpoint(data))) allSaved = false;
         }
       }
 
@@ -445,7 +512,27 @@ export class CrawlerService {
       total.errors += stat.errors;
     }
 
-    this.materials.saveData(data);
+    // 收尾落库：**必须等到确认写入数据库**才允许把任务标记为完成。
+    // 否则前端看到「已新增 N」而数据库里没有，实例一回收数据就没了。
+    this.task.progress = '正在写入数据库…';
+    if (!(await this.checkpoint(data))) allSaved = false;
+    const diag = this.store.diagnostics();
+    const pending = diag.pendingKeys.length;
+    if (pending > 0) allSaved = false;
+
+    if (!allSaved) {
+      details.push(
+        diag.dbEnabled
+          ? `⚠️ 有 ${total.created} 张已抓取但**未确认写入数据库**（待落库 ${pending} 项），实例回收后会丢失；` +
+            `请检查后台「持久化状态」是否为红色，并点「立即落库」重试`
+          : `⚠️ 未检测到数据库环境变量，这批新增只写在服务器本地文件，实例回收后会丢失；` +
+            `请在部署环境配置数据库（COZE_SUPABASE_URL / COZE_SUPABASE_ANON_KEY）`,
+      );
+      console.error(
+        `[crawler] 抓取完成但落库未确认：created=${total.created} pending=${pending} ` +
+          `dbEnabled=${diag.dbEnabled} state=${diag.dbState} lastError=${diag.lastError || '无'}`,
+      );
+    }
 
     return {
       created: total.created,
@@ -454,6 +541,8 @@ export class CrawlerService {
       // 兼容旧后台字段名
       failed: total.errors,
       newCategories: synced.length,
+      saved: allSaved,
+      pending,
       detail: details.join('；') || '无可用源',
     };
   }

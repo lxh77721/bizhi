@@ -68,7 +68,9 @@ export class AdminController {
 
   /** GET /api/admin/stats */
   @Get('stats')
-  stats() {
+  async stats() {
+    // 先做一次轻量新鲜度校验：别的实例刚抓完写入数据库的数据，本实例内存缓存里没有
+    await this.store.revalidate();
     const data = this.materialsService.getData();
     const diag = this.store.diagnostics();
     return {
@@ -129,7 +131,8 @@ export class AdminController {
   /* ------------------------- 素材管理 ------------------------- */
 
   @Get('materials')
-  listMaterials() {
+  async listMaterials() {
+    await this.store.revalidate();
     const data = this.materialsService.getData();
     return { status: 'success', data: { materials: data.materials, categories: data.categories } };
   }
@@ -285,7 +288,8 @@ export class AdminController {
    *  分类附带 existing = 该分类当前已入库的素材数。后台展示为「已有 N 张」，
    *  让操作者直观看到抓取是**增量追加**，不会覆盖已有图片。 */
   @Get('crawl/sources')
-  crawlSources() {
+  async crawlSources() {
+    await this.store.revalidate();
     const materials = this.materialsService.getData().materials || [];
     const countByCategory = new Map<string, number>();
     for (const m of materials) {

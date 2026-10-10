@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { View, Text, Image } from '@tarojs/components';
 import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,10 @@ export default function AdminPictures() {
   const [categoryKey, setCategoryKey] = useState('');
   const [uploading, setUploading] = useState(false);
   const [retitling, setRetitling] = useState(false);
+  // 从抓取页返回时页面不会重新挂载，必须靠「每次显示」重新拉列表，
+  // 否则刚抓进来的图片在这里看不到（数量一直显示旧值）
+  const [showSeq, setShowSeq] = useState(0);
+  useDidShow(() => setShowSeq((n) => n + 1));
 
   const load = useCallback(async () => {
     try {
@@ -42,7 +46,7 @@ export default function AdminPictures() {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, showSeq]);
 
   /** H5 端：XHR + FormData 直传 upload-create（绕过 Coze SW 拦截） */
   const uploadCreateH5 = (): Promise<void> =>

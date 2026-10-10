@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { View, Text } from '@tarojs/components';
 import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,9 @@ const ossFields: FieldDef[] = [
 
 export default function AdminConfig() {
   const [cfg, setCfg] = useState<Partial<PubConfig>>({});
+  // 返回本页时页面不会重新挂载，靠「每次显示」重新拉取配置（避免显示已被别处改过的旧值）
+  const [showSeq, setShowSeq] = useState(0);
+  useDidShow(() => setShowSeq((n) => n + 1));
 
   const load = useCallback(async () => {
     try {
@@ -47,7 +50,7 @@ export default function AdminConfig() {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, showSeq]);
 
   const save = async () => {
     try {

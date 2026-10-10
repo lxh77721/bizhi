@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { View, Text } from '@tarojs/components';
 import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,11 @@ export default function Admin() {
   const [authed, setAuthed] = useState(false);
   const [pwd, setPwd] = useState('');
   const [loginErr, setLoginErr] = useState('');
+  // Taro 会把页面实例保留在页面栈里：从「抓取素材」返回本页时不会重新挂载，
+  // 只挂载时拉一次数据的话，「图片总数」会一直停在进入本页时的旧值 —— 看起来就像
+  // 「提示已新增 N 张，但图片数量还是 0」。用每次显示时的序号驱动刷新。
+  const [showSeq, setShowSeq] = useState(0);
+  useDidShow(() => setShowSeq((n) => n + 1));
 
   const doLogin = useCallback(async () => {
     try {
@@ -85,11 +90,11 @@ export default function Admin() {
     );
   }
 
-  return <Dashboard onLogout={logout} />;
+  return <Dashboard onLogout={logout} showSeq={showSeq} />;
 }
 
 /* --------------------------- 登录后的看板 --------------------------- */
-function Dashboard({ onLogout }: { onLogout: () => void }) {
+function Dashboard({ onLogout, showSeq }: { onLogout: () => void; showSeq: number }) {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [flushing, setFlushing] = useState(false);
 
@@ -100,7 +105,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, showSeq]);
 
   /** 立即把待写入的数据落库（数据库抖动/降级时手动补写） */
   const flushStorage = useCallback(async () => {

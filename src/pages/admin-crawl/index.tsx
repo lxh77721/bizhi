@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { View, Text } from '@tarojs/components';
 import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
@@ -100,6 +100,14 @@ export default function AdminCrawl() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 每次返回本页都刷新各分类的「已有 N 张」（静默刷新，不动用户已做的勾选）
+  const [showSeq, setShowSeq] = useState(0);
+  useDidShow(() => setShowSeq((n) => n + 1));
+  useEffect(() => {
+    if (showSeq > 0) loadSources('silent');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSeq]);
+
   // 抓取是分钟级任务（多源 × 多分类 × 逐张下载上传），远超小程序 60s 请求超时，
   // 因此后端改为「立即返回 + 后台执行」，这里用轮询读取进度与结果。
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -137,7 +145,16 @@ export default function AdminCrawl() {
         }
         const r = d.result;
         const head = `新增 ${r?.created ?? 0} 张，跳过 ${r?.skipped ?? 0}，失败 ${r?.failed ?? 0}`;
-        setResult(r?.detail ? `${head}\n${r.detail}` : head);
+        // saved === false 表示这批新增还没确认写进数据库，实例回收就会丢 —— 必须显式告知，
+        // 不能只报「新增 N 张」让操作者以为已经入库了
+        const warn =
+          r && r.saved === false
+            ? `⚠️ 有 ${r.pending ?? 0} 项未确认写入数据库，这批数据在实例回收后会丢失；请检查后台「持久化状态」并点「立即落库」`
+            : '';
+        setResult([warn, r?.detail ? `${head}\n${r.detail}` : head].filter(Boolean).join('\n'));
+        if (r && r.saved === false) {
+          Taro.showModal({ title: '数据未落库', content: warn, showCancel: false });
+        }
         // 抓完刷新各分类的「已有 N 张」（静默，不动用户的选择）
         loadSources('silent');
       } catch (e: any) {
