@@ -33,32 +33,32 @@ const DEFAULT_CONFIG: AppConfig = {
 
 @Injectable()
 export class ConfigService implements OnModuleInit {
-  private cache: AppConfig = DEFAULT_CONFIG;
-
   constructor(private readonly store: FileStore) {}
 
   onModuleInit() {
-    this.reload();
+    const cfg = this.get();
+    console.log(`[Config] 已加载配置: appName=${cfg.appName}`);
   }
 
-  reload() {
-    this.cache = Object.assign(
-      {},
-      DEFAULT_CONFIG,
-      this.store.read('config.json', DEFAULT_CONFIG),
-    );
-  }
-
-  /** 完整配置（仅管理端使用） */
+  /**
+   * 当前配置：**每次实时取**（数据单一来源在 FileStore）。
+   * 本服务以前自持一份 cache 副本，在 FileStore 检测到数据库被别的实例改过并刷新后，
+   * 这里还是旧值；保存时以旧值为基底会把并发改动盖掉，所以改为读时即取最新。
+   */
   get(): AppConfig {
-    return this.cache;
+    return Object.assign({}, DEFAULT_CONFIG, this.store.read('config.json', DEFAULT_CONFIG));
   }
 
-  /** 合并局部更新并落盘 */
+  /** 兼容旧调用点（等价于 get，仅用于日志/刷新后重新读取） */
+  reload(): AppConfig {
+    return this.get();
+  }
+
+  /** 合并局部更新并落盘（以最新值为基底，避免丢并发改动） */
   update(patch: Partial<AppConfig>): AppConfig {
-    this.cache = Object.assign({}, this.cache, patch);
-    this.store.write('config.json', this.cache);
-    return this.cache;
+    const next = Object.assign({}, this.get(), patch);
+    this.store.write('config.json', next);
+    return next;
   }
 
   /** 公网可读的配置（去除敏感项：管理口令、OSS 密钥），供小程序前端下发 */
@@ -68,7 +68,7 @@ export class ConfigService implements OnModuleInit {
       ossSecretKey: _sk,
       ossAccessKey: _ak,
       ...publicConfig
-    } = this.cache;
+    } = this.get();
     return publicConfig;
   }
 }

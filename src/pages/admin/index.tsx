@@ -91,6 +91,7 @@ export default function Admin() {
 /* --------------------------- 登录后的看板 --------------------------- */
 function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [flushing, setFlushing] = useState(false);
 
   const load = useCallback(async () => {
     const res = await Network.request({ url: '/api/admin/stats', header: authHeader() });
@@ -99,6 +100,29 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  /** 立即把待写入的数据落库（数据库抖动/降级时手动补写） */
+  const flushStorage = useCallback(async () => {
+    setFlushing(true);
+    try {
+      const res = await Network.request({
+        url: '/api/admin/storage/flush',
+        method: 'POST',
+        header: authHeader(),
+      });
+      const d = (res.data as any)?.data;
+      const left = d?.pendingAfter?.length ?? 0;
+      Taro.showToast({
+        title: d?.flushed ? '已全部写入数据库' : `仍有 ${left} 项未写入`,
+        icon: d?.flushed ? 'success' : 'none',
+      });
+      load();
+    } catch {
+      Taro.showToast({ title: '操作失败，请稍后重试', icon: 'none' });
+    } finally {
+      setFlushing(false);
+    }
   }, [load]);
 
   const entries = [
@@ -168,7 +192,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           </View>
           <View>
             <Text className="block text-base font-semibold">管理看板</Text>
-            <Text className="block text-xs text-slate-400">头像壁纸大全后台</Text>
+            <Text className="block text-xs text-slate-400">简影壁纸馆后台</Text>
           </View>
         </View>
         <Button size="sm" variant="ghost" onClick={onLogout}>
@@ -189,6 +213,43 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             </Card>
           ))}
         </View>
+
+        {/* 持久化状态：数据库没生效时数据会随实例回收丢失，必须显眼提示 */}
+        {stats?.storage ? (
+          <Card
+            className={`mt-3 ${
+              stats.storage.database ? 'border-emerald-200' : 'border-red-300 bg-red-50'
+            }`}
+          >
+            <CardContent className="p-4">
+              <View className="flex items-center justify-between">
+                <View className="flex items-center flex-1 mr-2">
+                  <View
+                    className={`w-2.5 h-2.5 rounded-full mr-2 ${
+                      stats.storage.database ? 'bg-emerald-500' : 'bg-red-500'
+                    }`}
+                  />
+                  <Text className="text-sm font-semibold">
+                    {stats.storage.database ? '数据已存入数据库' : '数据库未生效，数据会丢'}
+                  </Text>
+                </View>
+                <Button size="sm" variant="outline" onClick={flushStorage} disabled={flushing}>
+                  <Text>{flushing ? '写入中…' : '立即落库'}</Text>
+                </Button>
+              </View>
+              <Text className="block text-xs text-slate-500 mt-2">
+                {stats.storage.database
+                  ? `待落库 ${stats.storage.pendingWrites} 项 · 累计写入成功 ${stats.storage.dbWritesOk} 次`
+                  : '当前数据只写在服务器本地，实例回收或重新部署后会回到初始状态，请检查数据库环境变量'}
+              </Text>
+              {stats.storage.lastError ? (
+                <Text className="block text-xs text-red-500 mt-1">
+                  最近错误：{stats.storage.lastError}
+                </Text>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
 
         {/* 功能入口 */}
         <Text className="block text-sm text-slate-500 mt-5 mb-3">功能管理</Text>

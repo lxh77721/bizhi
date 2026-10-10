@@ -13,18 +13,25 @@ const USERS_FILE = 'users.json';
  */
 @Injectable()
 export class UserService implements OnModuleInit {
-  private cache: UsersFile;
-
   constructor(
     private readonly store: FileStore,
     private readonly materials: MaterialsService,
-  ) {
-    // 缓存延迟到 onModuleInit 初始化，确保 FileStore 已从数据库加载持久化数据
-    this.cache = { users: {} };
-  }
+  ) {}
 
   onModuleInit() {
-    this.cache = this.store.read<UsersFile>(USERS_FILE, { users: {} });
+    const file = this.store.read<UsersFile>(USERS_FILE, { users: {} });
+    console.log(`[User] 已加载 ${Object.keys(file.users || {}).length} 个用户`);
+  }
+
+  /**
+   * 用户数据：**每次实时取**（单一来源在 FileStore）。
+   * 原先本服务自持一份 cache 副本，FileStore 在检测到数据库被别的实例改过后会刷新，
+   * 本服务仍拿旧副本整份写回，会把别的实例的点赞/下载记录盖掉。
+   */
+  private get cache(): UsersFile {
+    const file = this.store.read<UsersFile>(USERS_FILE, { users: {} });
+    if (!file.users) file.users = {};
+    return file;
   }
 
   /** 素材 → 存储用快照 */

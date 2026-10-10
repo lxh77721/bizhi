@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { FileStore } from '@/common/file-store.service';
 
-/** 首页展示的管理统计指标（持久化到 server/data/stats.json） */
+/** 首页展示的管理统计指标（持久化到 app_store 的 stats.json 键） */
 export interface Stats {
   unlockCount: number;   // 激励视频解锁下载累计次数
 }
@@ -11,21 +11,20 @@ const DEFAULT_STATS: Stats = {
 };
 
 @Injectable()
-export class StatsService {
-  private cache: Stats = DEFAULT_STATS;
-
+export class StatsService implements OnModuleInit {
   constructor(private readonly store: FileStore) {}
 
   onModuleInit() {
-    this.cache = Object.assign({}, DEFAULT_STATS, this.store.read('stats.json', DEFAULT_STATS));
+    console.log(`[Stats] 已加载统计: 解锁 ${this.get().unlockCount} 次`);
   }
 
+  /** 统计：每次实时取（数据单一来源在 FileStore），避免用旧副本覆盖别的实例的计数 */
   get(): Stats {
-    return this.cache;
+    return Object.assign({}, DEFAULT_STATS, this.store.read('stats.json', DEFAULT_STATS));
   }
 
   recordUnlock() {
-    this.cache = { ...this.cache, unlockCount: this.cache.unlockCount + 1 };
-    this.store.write('stats.json', this.cache);
+    const cur = this.get();
+    this.store.write('stats.json', { ...cur, unlockCount: cur.unlockCount + 1 });
   }
 }

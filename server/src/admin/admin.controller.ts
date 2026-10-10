@@ -23,6 +23,7 @@ import { MaterialsService } from '@/materials/materials.service';
 import { ConfigService, AppConfig } from '@/config/config.service';
 import { StatsService } from '@/stats/stats.service';
 import { OssService } from '@/common/oss.service';
+import { FileStore } from '@/common/file-store.service';
 import { CrawlerService } from '@/crawler/crawler.service';
 import { SOURCES as CRAWL_SOURCES } from '@/crawler/sources';
 import { MaterialItem, Category } from '@/materials/materials.data';
@@ -60,6 +61,7 @@ export class AdminController {
     private readonly statsService: StatsService,
     private readonly oss: OssService,
     private readonly crawler: CrawlerService,
+    private readonly store: FileStore,
   ) {}
 
   /* ------------------------------ 统计看板 ------------------------------ */
@@ -68,12 +70,47 @@ export class AdminController {
   @Get('stats')
   stats() {
     const data = this.materialsService.getData();
+    const diag = this.store.diagnostics();
     return {
       status: 'success',
       data: {
         ...this.statsService.get(),
         materialCount: data.materials.length,
         categoryCount: data.categories.length,
+        storage: {
+          database: diag.dbEnabled && diag.dbState === 'ok',
+          state: diag.dbState,
+          pendingWrites: diag.pendingKeys.length,
+          dbWritesOk: diag.dbWritesOk,
+          dbWritesFailed: diag.dbWritesFailed,
+          lastDbWriteAt: diag.lastDbWriteAt ?? null,
+          lastError: diag.lastError ?? null,
+        },
+      },
+    };
+  }
+
+  /* ---------------------------- 持久化自检 ---------------------------- */
+
+  /** GET /api/admin/storage —— 持久化详细诊断（排查数据「回到初始状态」） */
+  @Get('storage')
+  storage() {
+    return { status: 'success', data: this.store.diagnostics() };
+  }
+
+  /** POST /api/admin/storage/flush —— 立即把待落库的改动写进数据库 */
+  @Post('storage/flush')
+  async flushStorage() {
+    const diagBefore = this.store.diagnostics();
+    const ok = await this.store.flushNow();
+    const diagAfter = this.store.diagnostics();
+    return {
+      status: 'success',
+      data: {
+        flushed: ok,
+        pendingBefore: diagBefore.pendingKeys,
+        pendingAfter: diagAfter.pendingKeys,
+        lastError: diagAfter.lastError ?? null,
       },
     };
   }

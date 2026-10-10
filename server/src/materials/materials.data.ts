@@ -68,6 +68,7 @@ export const CATEGORIES: Category[] = [
 export const MATERIALS: MaterialItem[] = [
   {
     id: 'girl-01',
+    code: 'hqwpblu3',
     title: '樱花治愈女生头像',
     category: 'girl',
     url: '/static/materials/girl-01.jpg',
@@ -78,6 +79,7 @@ export const MATERIALS: MaterialItem[] = [
   },
   {
     id: 'girl-02',
+    code: 'i9rlayde',
     title: '花语清新女生头像',
     category: 'girl',
     url: '/static/materials/girl-02.jpg',
@@ -88,6 +90,7 @@ export const MATERIALS: MaterialItem[] = [
   },
   {
     id: 'boy-01',
+    code: 'xsl6pulk',
     title: '晴空治愈男生头像',
     category: 'boy',
     url: '/static/materials/boy-01.jpg',
@@ -98,6 +101,7 @@ export const MATERIALS: MaterialItem[] = [
   },
   {
     id: 'couple-01',
+    code: '3ux9524u',
     title: '暖阳浪漫情侣头像',
     category: 'couple',
     url: '/static/materials/couple-01.jpg',
@@ -108,6 +112,7 @@ export const MATERIALS: MaterialItem[] = [
   },
   {
     id: 'landscape-01',
+    code: 'ytds59z7',
     title: '雪山晨光治愈壁纸',
     category: 'landscape',
     url: '/static/materials/landscape-01.jpg',
@@ -118,6 +123,7 @@ export const MATERIALS: MaterialItem[] = [
   },
   {
     id: 'landscape-02',
+    code: 'vfd73v9x',
     title: '落日海岛氛围壁纸',
     category: 'landscape',
     url: '/static/materials/landscape-02.jpg',
@@ -128,6 +134,7 @@ export const MATERIALS: MaterialItem[] = [
   },
   {
     id: 'text-01',
+    code: '40og3zgt',
     title: '越来越好极简文字壁纸',
     category: 'text',
     url: '/static/materials/text-01.jpg',
@@ -138,6 +145,7 @@ export const MATERIALS: MaterialItem[] = [
   },
   {
     id: 'text-02',
+    code: 'pk6amg96',
     title: '今天也要开心文字壁纸',
     category: 'text',
     url: '/static/materials/text-02.jpg',

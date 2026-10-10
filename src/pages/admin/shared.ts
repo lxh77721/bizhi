@@ -35,10 +35,22 @@ export interface AdminCategory {
   type?: 'avatar' | 'wallpaper';
 }
 
+/** 持久化状态（数据库是否真的在用；database=false 时数据会随实例回收丢失） */
+export interface AdminStorageStatus {
+  database: boolean;
+  state: 'connecting' | 'ok' | 'degraded';
+  pendingWrites: number;
+  dbWritesOk: number;
+  dbWritesFailed: number;
+  lastDbWriteAt: string | null;
+  lastError: string | null;
+}
+
 export interface AdminStats {
   materialCount: number;
   categoryCount: number;
   unlockCount: number;
+  storage?: AdminStorageStatus;
 }
 
 export interface PubConfig {
