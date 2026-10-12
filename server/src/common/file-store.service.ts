@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { getSupabaseClient, loadEnv } from '@/storage/database/supabase-client';
 
 /**
  * 通用 JSON 存储服务（内存缓存 + 数据库持久化）
@@ -62,6 +62,10 @@ export interface StoreDiagnostics {
 const LOAD_RETRY_MS = [400, 1000, 2500, 5000, 10000];
 /** 写入重试退避（毫秒），用尽后维持最后一档持续重试 */
 const WRITE_RETRY_MS = [500, 1500, 4000, 10000, 20000, 30000];
+/** 两次凭据探测之间的最小间隔（毫秒），避免反复拉起子进程探测 */
+const ENV_PROBE_MIN_INTERVAL_MS = 30000;
+/** 尚未探测到数据库凭据时的重探节奏（毫秒），逐步退避后维持最长一档 */
+const DB_WATCH_MS = [5000, 15000, 30000, 60000];
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -91,6 +95,10 @@ export class FileStore implements OnModuleInit, OnApplicationShutdown {
   private dbState: 'connecting' | 'ok' | 'degraded' = 'connecting';
   private dbQueue: Promise<void> = Promise.resolve();
   private flushTimer?: ReturnType<typeof setTimeout>;
+  /** 尚未启用数据库时的重探定时器 */
+  private dbWatchTimer?: ReturnType<typeof setTimeout>;
+  private dbWatchAttempt = 0;
+  private lastEnvProbeAt = 0;
   private writeAttempt = 0;
   private shuttingDown = false;
   /** 是否正在做新鲜度校验（避免并发重入） */
@@ -109,20 +117,90 @@ export class FileStore implements OnModuleInit, OnApplicationShutdown {
   constructor() {
     this.seedDir = this.resolveSeedDir();
     this.dataDir = this.resolveWritableDir();
-    this.dbEnabled = !!(process.env.COZE_SUPABASE_URL && process.env.COZE_SUPABASE_ANON_KEY);
-    this.dbState = this.dbEnabled ? 'connecting' : 'degraded';
+    // ⚠️ 必须走 refreshDbEnabled() 而不是直接读 process.env：
+    // 线上凭据由 loadEnv()（dotenv / 平台工作负载身份）注入，构造函数里直接读极可能拿到
+    // undefined，一旦据此把 dbEnabled 钉死为 false，整个实例生命周期都不会再落库 ——
+    // 这正是「跑几小时后数据回到初始状态」「提示已新增 N 但图片数量没变」的根因。
+    const enabled = this.refreshDbEnabled();
+    if (!enabled) this.dbState = 'degraded';
 
-    if (this.dbEnabled) {
+    if (enabled) {
       this.logger.log(
         `[${this.instanceId}] 数据库持久化: 已配置 | 种子目录: ${this.seedDir} | 可写目录: ${this.dataDir}`,
       );
     } else {
-      // 这种情况会导致「跑几小时后数据回到初始状态」，必须显式报错而不是悄悄降级
+      // 这种情况会导致「跑几小时后数据回到初始状态」，必须显式报错而不是悄悄降级；
+      // 但仍会定时重探（凭据可能在启动后才注入），不像过去那样永久放弃。
       this.logger.error(
         `[${this.instanceId}] ⚠️ 未检测到数据库环境变量(COZE_SUPABASE_URL / COZE_SUPABASE_ANON_KEY)：` +
-          `数据只会写本地文件(${this.dataDir})，实例回收或重新部署后必然回退到初始数据。`,
+          `暂时只写本地文件(${this.dataDir})，实例回收或重新部署后会回退到初始数据；将持续重试探测。`,
       );
     }
+  }
+
+  /**
+   * 重新探测数据库是否可用。
+   * --------------------------------------------------------------------------
+   * `getSupabaseClient()` 内部才会调用 `loadEnv()` 把凭据写进 `process.env`，
+   * 因此「直接读 process.env」在启动早期是不可靠的。这里显式先探测再判断，
+   * 并保证 **一旦可用就不会再回退**（避免运行中把可用的库判成不可用而丢写入）。
+   */
+  private refreshDbEnabled(): boolean {
+    if (this.dbEnabled) return true;
+
+    const now = Date.now();
+    if (now - this.lastEnvProbeAt < ENV_PROBE_MIN_INTERVAL_MS) return false;
+    this.lastEnvProbeAt = now;
+
+    try {
+      loadEnv();
+    } catch {
+      /* 取不到凭据就按本地模式继续跑，下面的判断会返回 false */
+    }
+
+    if (process.env.COZE_SUPABASE_URL && process.env.COZE_SUPABASE_ANON_KEY) {
+      this.dbEnabled = true;
+      if (this.dbState !== 'ok') this.dbState = 'connecting';
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 立即探测一次凭据并接管数据库（供健康检查/后台「自检」调用）。
+   * 让运维不必等后台重探定时器：打开 /api/health 就能拿到「到底连没连上库」的结论。
+   */
+  async probeDatabase(): Promise<void> {
+    if (this.dbEnabled) return;
+    if (!this.refreshDbEnabled()) return;
+    this.logger.log(
+      `[${this.instanceId}] 已探测到数据库凭据，启用数据库持久化（来源：主动自检）`,
+    );
+    await this.loadWithRetry(LOAD_RETRY_MS.length);
+    this.scheduleFlush(0);
+  }
+
+  /** 尚未启用数据库时，按退避节奏反复重探；一旦探到就立刻接管并补一次启动加载 */
+  private scheduleDbWatch() {
+    if (this.dbWatchTimer || this.shuttingDown || this.dbEnabled) return;
+    const delay = DB_WATCH_MS[Math.min(this.dbWatchAttempt, DB_WATCH_MS.length - 1)];
+    this.dbWatchTimer = setTimeout(() => {
+      this.dbWatchTimer = undefined;
+      void this.dbWatchTick();
+    }, delay);
+    const t = this.dbWatchTimer as unknown as { unref?: () => void };
+    if (typeof t.unref === 'function') t.unref();
+  }
+
+  private async dbWatchTick(): Promise<void> {
+    if (this.shuttingDown) return;
+    await this.probeDatabase();
+    if (!this.dbEnabled) {
+      this.dbWatchAttempt++;
+      this.scheduleDbWatch();
+      return;
+    }
+    this.dbWatchAttempt = 0;
   }
 
   /* ------------------------------------------------------------------ */
@@ -228,7 +306,14 @@ export class FileStore implements OnModuleInit, OnApplicationShutdown {
   /* ------------------------------------------------------------------ */
 
   async onModuleInit(): Promise<void> {
-    if (!this.dbEnabled) return;
+    // 再探一次：构造函数执行得很早，凭据有可能此时才刚被注入
+    if (!this.refreshDbEnabled()) {
+      // ⚠️ 过去这里是直接 `return` —— 等于「没探测到就永久放弃」，
+      // 平台稍后注入凭据也永远不会恢复。改为定时重探。
+      this.scheduleDbWatch();
+      return;
+    }
+    this.dbWatchAttempt = 0;
     const ok = await this.loadWithRetry(LOAD_RETRY_MS.length);
     if (!ok) {
       this.logger.error(
@@ -552,6 +637,10 @@ export class FileStore implements OnModuleInit, OnApplicationShutdown {
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
       this.flushTimer = undefined;
+    }
+    if (this.dbWatchTimer) {
+      clearTimeout(this.dbWatchTimer);
+      this.dbWatchTimer = undefined;
     }
     if (!this.dbEnabled) return;
     try {

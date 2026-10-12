@@ -17,7 +17,13 @@ export class StorageController {
   constructor(private readonly store: FileStore) {}
 
   @Get()
-  check() {
+  async check() {
+    // 主动自检一次：凭据可能是启动后才注入的，这里不等后台定时器，当场给结论
+    try {
+      await this.store.probeDatabase();
+    } catch {
+      /* 探测失败不影响下面的诊断输出 */
+    }
     const diag = this.store.diagnostics();
     const doc = this.store.read<{ materials: MaterialItem[]; categories: Category[] }>(
       'materials.json',
@@ -30,9 +36,14 @@ export class StorageController {
         storage: {
           /** true = 数据真正落在数据库里（实例回收/重新部署都不会丢） */
           database: diag.dbEnabled && diag.dbState === 'ok',
+          /** 是否拿到了数据库凭据（false = 平台没注入，任何代码改动都救不了，先去控制台绑定数据库） */
+          dbEnabled: diag.dbEnabled,
+          /** connecting=启动中 / ok=在用 / degraded=降级为本地文件 */
           state: diag.dbState,
           /** >0 表示还有改动没写进数据库 */
           pendingWrites: diag.pendingKeys.length,
+          dbWritesOk: diag.dbWritesOk,
+          lastError: diag.lastError ?? null,
           lastDbWriteAt: diag.lastDbWriteAt ?? null,
           materialCount: Array.isArray(doc.materials) ? doc.materials.length : 0,
           categoryCount: Array.isArray(doc.categories) ? doc.categories.length : 0,

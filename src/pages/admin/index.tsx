@@ -245,7 +245,9 @@ function Dashboard({ onLogout, showSeq }: { onLogout: () => void; showSeq: numbe
               <Text className="block text-xs text-slate-500 mt-2">
                 {stats.storage.database
                   ? `待落库 ${stats.storage.pendingWrites} 项 · 累计写入成功 ${stats.storage.dbWritesOk} 次`
-                  : '当前数据只写在服务器本地，实例回收或重新部署后会回到初始状态，请检查数据库环境变量'}
+                  : stats.storage.dbEnabled
+                    ? '已拿到数据库凭据但还没连上（可能刚启动或网络抖动），系统会自动重试；若一直这样就点「立即落库」'
+                    : '没有检测到数据库凭据：数据只写在服务器本地，实例回收或重新部署后会回到初始状态。请先在部署控制台绑定数据库，再重新部署'}
               </Text>
               {stats.storage.lastError ? (
                 <Text className="block text-xs text-red-500 mt-1">

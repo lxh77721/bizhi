@@ -38,6 +38,8 @@ export interface AdminCategory {
 /** 持久化状态（数据库是否真的在用；database=false 时数据会随实例回收丢失） */
 export interface AdminStorageStatus {
   database: boolean;
+  /** 是否拿到数据库凭据（false = 平台没注入，需先去控制台绑定数据库） */
+  dbEnabled: boolean;
   state: 'connecting' | 'ok' | 'degraded';
   pendingWrites: number;
   dbWritesOk: number;

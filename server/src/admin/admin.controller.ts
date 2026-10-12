@@ -69,6 +69,12 @@ export class AdminController {
   /** GET /api/admin/stats */
   @Get('stats')
   async stats() {
+    // 顺带自检一次数据库凭据（凭据可能在启动后才注入，否则这里会一直显示「数据库未生效」）
+    try {
+      await this.store.probeDatabase();
+    } catch {
+      /* 探测失败不影响看板输出 */
+    }
     // 先做一次轻量新鲜度校验：别的实例刚抓完写入数据库的数据，本实例内存缓存里没有
     await this.store.revalidate();
     const data = this.materialsService.getData();
@@ -81,6 +87,8 @@ export class AdminController {
         categoryCount: data.categories.length,
         storage: {
           database: diag.dbEnabled && diag.dbState === 'ok',
+          /** 是否拿到数据库凭据（false = 平台没注入，改代码也没用，先去控制台绑定数据库） */
+          dbEnabled: diag.dbEnabled,
           state: diag.dbState,
           pendingWrites: diag.pendingKeys.length,
           dbWritesOk: diag.dbWritesOk,
@@ -96,7 +104,12 @@ export class AdminController {
 
   /** GET /api/admin/storage —— 持久化详细诊断（排查数据「回到初始状态」） */
   @Get('storage')
-  storage() {
+  async storage() {
+    try {
+      await this.store.probeDatabase();
+    } catch {
+      /* 忽略：探测失败时直接返回当前诊断 */
+    }
     return { status: 'success', data: this.store.diagnostics() };
   }
 
