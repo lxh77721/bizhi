@@ -5,7 +5,7 @@ import { Network } from '@/network';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Info, Megaphone, HardDrive } from 'lucide-react-taro';
+import { Info, Megaphone, HardDrive, Search } from 'lucide-react-taro';
 import { authHeader, handleUnauthorized, PubConfig } from '../admin/shared';
 
 type FieldDef = { key: keyof PubConfig; label: string; hint: string; password?: boolean };
@@ -28,6 +28,12 @@ const ossFields: FieldDef[] = [
   { key: 'ossAccessKey', label: 'AccessKey ID', hint: '阿里云 AK，仅管理端可见', password: true },
   { key: 'ossSecretKey', label: 'AccessKey Secret', hint: '阿里云 SK，仅管理端可见', password: true },
   { key: 'ossPublicUrl', label: '公网访问域名', hint: '如 img389.oss-cn-beijing.aliyuncs.com' },
+];
+
+// 搜一搜「页面内容推送」凭据：主动推页面能明显提高收录及时率
+const seoFields: FieldDef[] = [
+  { key: 'mpAppId', label: '小程序 AppID', hint: 'mp 后台「开发管理 → 开发设置」可查' },
+  { key: 'mpAppSecret', label: '小程序 AppSecret', hint: '同页获取；若提示 IP 白名单，把部署出口 IP 加进白名单', password: true },
 ];
 
 export default function AdminConfig() {
@@ -75,6 +81,7 @@ export default function AdminConfig() {
     { title: '基础信息', icon: <Info size={18} color="#4c9df5" />, fields: basicFields },
     { title: '广告配置', icon: <Megaphone size={18} color="#f59e0b" />, fields: adFields },
     { title: '对象存储（阿里云 OSS）', icon: <HardDrive size={18} color="#10b981" />, fields: ossFields },
+    { title: '搜一搜收录推送', icon: <Search size={18} color="#8b5cf6" />, fields: seoFields },
   ];
 
   return (

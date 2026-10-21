@@ -13,6 +13,7 @@ import {
   Download,
   Trash2,
   LayoutGrid,
+  Search,
 } from 'lucide-react-taro';
 import {
   TOKEN_KEY,
@@ -97,6 +98,7 @@ export default function Admin() {
 function Dashboard({ onLogout, showSeq }: { onLogout: () => void; showSeq: number }) {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [flushing, setFlushing] = useState(false);
+  const [pushing, setPushing] = useState(false);
 
   const load = useCallback(async () => {
     const res = await Network.request({ url: '/api/admin/stats', header: authHeader() });
@@ -129,6 +131,28 @@ function Dashboard({ onLogout, showSeq }: { onLogout: () => void; showSeq: numbe
       setFlushing(false);
     }
   }, [load]);
+
+  /** 主动把可收录页面推给微信搜一搜（比被动等爬虫快得多） */
+  const pushSeo = useCallback(async () => {
+    setPushing(true);
+    try {
+      const res = await Network.request({
+        url: '/api/admin/seo/push',
+        method: 'POST',
+        header: authHeader(),
+      });
+      const d = (res.data as any)?.data;
+      Taro.showModal({
+        title: d?.ok ? '推送成功' : '推送未成功',
+        content: `${d?.ok ? `已推送 ${d.total} 个页面。` : ''}${d?.hint || ''}`,
+        showCancel: false,
+      });
+    } catch {
+      Taro.showToast({ title: '推送失败，请稍后重试', icon: 'none' });
+    } finally {
+      setPushing(false);
+    }
+  }, []);
 
   const entries = [
     {
@@ -257,6 +281,28 @@ function Dashboard({ onLogout, showSeq }: { onLogout: () => void; showSeq: numbe
             </CardContent>
           </Card>
         ) : null}
+
+        {/* 搜一搜收录推送：主动推页面比被动等爬虫快得多；errcode 还能直接暴露收录开关状态 */}
+        <Card className="mt-3">
+          <CardContent className="p-4">
+            <View className="flex items-center justify-between">
+              <View className="flex items-center flex-1 mr-2">
+                <View className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center mr-2">
+                  <Search size={16} color="#8b5cf6" />
+                </View>
+                <Text className="text-sm font-semibold">搜一搜收录</Text>
+              </View>
+              <Button size="sm" variant="outline" onClick={pushSeo} disabled={pushing}>
+                <Text>{pushing ? '推送中…' : '推送页面'}</Text>
+              </Button>
+            </View>
+            <Text className="block text-xs text-slate-500 mt-2">
+              把首页、分类专题页和全部详情页主动推给微信搜索收录。需先在「系统配置」里填写小程序
+              AppID / AppSecret；抓取任务完成后也会自动推送新增页面。若提示需要申请「内容接入」，
+              说明当前账号暂不支持主动推送，请保持「页面收录」开关开启并做好内容质量。
+            </Text>
+          </CardContent>
+        </Card>
 
         {/* 功能入口 */}
         <Text className="block text-sm text-slate-500 mt-5 mb-3">功能管理</Text>

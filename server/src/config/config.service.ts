@@ -15,6 +15,9 @@ export interface AppConfig {
   ossAccessKey: string; // AK
   ossSecretKey: string; // SK（敏感，不向下发）
   ossPublicUrl: string; // 空间公开读域名（如 CDN / bkt.clouddn.com），用于拼接素材访问 URL；留空则用短期预签名 URL
+  // 微信搜一搜「页面内容推送」（wxaapi_submitpages）——主动把页面推给微信收录
+  mpAppId: string;      // 小程序 AppID
+  mpAppSecret: string;  // 小程序 AppSecret（敏感，不向下发；mp 后台「开发管理 → 开发设置」获取）
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -29,6 +32,8 @@ const DEFAULT_CONFIG: AppConfig = {
   ossAccessKey: '',
   ossSecretKey: '',
   ossPublicUrl: '',
+  mpAppId: '',
+  mpAppSecret: '',
 };
 
 @Injectable()
@@ -61,12 +66,13 @@ export class ConfigService implements OnModuleInit {
     return next;
   }
 
-  /** 公网可读的配置（去除敏感项：管理口令、OSS 密钥），供小程序前端下发 */
+  /** 公网可读的配置（去除敏感项：管理口令、OSS 密钥、AppSecret），供小程序前端下发 */
   getPublic() {
     const {
       adminPassword: _pwd,
       ossSecretKey: _sk,
       ossAccessKey: _ak,
+      mpAppSecret: _mpSecret,
       ...publicConfig
     } = this.get();
     return publicConfig;

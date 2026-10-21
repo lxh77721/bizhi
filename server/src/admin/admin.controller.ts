@@ -24,6 +24,7 @@ import { ConfigService, AppConfig } from '@/config/config.service';
 import { StatsService } from '@/stats/stats.service';
 import { OssService } from '@/common/oss.service';
 import { FileStore } from '@/common/file-store.service';
+import { WxSearchService } from '@/common/wx-search.service';
 import { CrawlerService } from '@/crawler/crawler.service';
 import { SOURCES as CRAWL_SOURCES } from '@/crawler/sources';
 import { MaterialItem, Category } from '@/materials/materials.data';
@@ -62,6 +63,7 @@ export class AdminController {
     private readonly oss: OssService,
     private readonly crawler: CrawlerService,
     private readonly store: FileStore,
+    private readonly wxSearch: WxSearchService,
   ) {}
 
   /* ------------------------------ 统计看板 ------------------------------ */
@@ -130,8 +132,16 @@ export class AdminController {
     };
   }
 
-  /* ---------------------- 清空素材库（分类+素材全部重建） ---------------------- */
+  /* ---------------------------- 搜一搜收录推送 ---------------------------- */
 
+  /** POST /api/admin/seo/push —— 主动把可收录页面推给微信搜一搜（wxaapi_submitpages） */
+  @Post('seo/push')
+  async pushSeo() {
+    const result = await this.wxSearch.pushPages();
+    return { status: 'success', data: result };
+  }
+
+  /* ---------------------- 清空素材库（分类+素材全部重建） ---------------------- */
   @Post('purge')
   purge() {
     const data = this.materialsService.getData();

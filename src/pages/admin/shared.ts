@@ -67,4 +67,6 @@ export interface PubConfig {
   ossAccessKey: string;
   ossSecretKey: string;
   ossPublicUrl: string;
+  mpAppId: string;
+  mpAppSecret: string;
 }

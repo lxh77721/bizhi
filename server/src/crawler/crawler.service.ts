@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { MaterialsService, MaterialsFile } from '@/materials/materials.service';
 import { OssService } from '@/common/oss.service';
 import { FileStore } from '@/common/file-store.service';
+import { WxSearchService } from '@/common/wx-search.service';
 import { MaterialItem, Category } from '@/materials/materials.data';
 import {
   SOURCES,
@@ -128,6 +129,7 @@ export class CrawlerService {
     private readonly materials: MaterialsService,
     private readonly oss: OssService,
     private readonly store: FileStore,
+    private readonly wxSearch: WxSearchService,
   ) {}
 
   isRunning(): boolean {
@@ -336,6 +338,8 @@ export class CrawlerService {
 
     const total: Stat = { created: 0, skipped: 0, errors: 0 };
     const details: string[] = [];
+    /** 本次新增的素材 id：抓完自动推给搜一搜收录 */
+    const createdIds: string[] = [];
     /** 距上次落库检查点又新增了多少张 */
     let sinceCheckpoint = 0;
     /** 本次任务是否所有新增都已确认落库（中途任何一次失败都会置 false） */
@@ -486,6 +490,7 @@ export class CrawlerService {
             addedByCategory.set(categoryKey, targetAdded + 1);
             stat.created++;
             total.created++;
+            createdIds.push(id);
             this.task.progress = `${src.name} · ${category.label} · 已新增 ${total.created}`;
 
             // 分批落库：长任务中途被回收也不至于整批消失
@@ -532,6 +537,19 @@ export class CrawlerService {
         `[crawler] 抓取完成但落库未确认：created=${total.created} pending=${pending} ` +
           `dbEnabled=${diag.dbEnabled} state=${diag.dbState} lastError=${diag.lastError || '无'}`,
       );
+    }
+
+    // 新页面主动推给搜一搜收录：被动等爬虫来抓对冷启动太慢。
+    // 推送失败不影响抓取结果本身（pushPages 内部已兜底，这里只透出提示）。
+    if (createdIds.length > 0 && allSaved) {
+      const pushed = await this.wxSearch.pushMaterialDetails(createdIds);
+      if (pushed) {
+        details.push(
+          pushed.ok
+            ? `搜一搜收录推送：已推送 ${pushed.total} 个新页面`
+            : `搜一搜收录推送未成功（errcode=${pushed.errcode}）：${pushed.hint}`,
+        );
+      }
     }
 
     return {
